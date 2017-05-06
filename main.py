@@ -3,7 +3,7 @@ import numpy as np
 import math
 n_blue_lights = 9
 n_lights_lev0_tuple = 3
-n_trials = 100
+n_trials = 200
 
 n_levels = math.ceil(n_blue_lights ** (1/n_lights_lev0_tuple))
 alpha = 0.75
@@ -58,11 +58,20 @@ class NoveltyAgent(FlatAgent):
     def update_values(self, old_state, action, new_state):
         light_i, switch_to = action
         self.n[switch_to, light_i] += 1
-        surprise = 1 / self.n[switch_to, light_i]
-        self.v[switch_to, light_i] += alpha * (surprise - self.v[switch_to, light_i])  # RL with surprise instead reward
+        novelty = 1 / self.n[switch_to, light_i]
+        self.v[switch_to, light_i] += alpha * (novelty - self.v[switch_to, light_i])  # RL with novelty instead reward
 
 
-agent = NoveltyAgent()
+class NoveltyRewardAgent(FlatAgent):
+    def update_values(self, old_state, action, new_state):
+        light_i, switch_to = action
+        self.n[switch_to, light_i] += 1
+        novelty = 1 / self.n[switch_to, light_i]
+        reward = sum(new_state[0, :]) - sum(old_state[0, :])
+        self.v[switch_to, light_i] += alpha * (novelty + reward - self.v[switch_to, light_i])  # RL with novelty instead reward
+
+
+agent = NoveltyRewardAgent()
 environment = Environment()
 
 for _ in range(n_trials):

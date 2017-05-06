@@ -6,7 +6,7 @@ n_lights_lev0_tuple = 3
 n_trials = 100
 
 n_levels = math.ceil(n_blue_lights ** (1/n_lights_lev0_tuple))
-alpha = 0.5
+alpha = 0.75
 epsilon = 0.1
 
 
@@ -30,12 +30,11 @@ class Environment(object):
                 self.state[level, color_tuple] = 0  # turn lower-level lights off
 
 
-class Agent(object):
+class FlatAgent(object):
     def __init__(self):
         self.v = np.zeros([2, n_blue_lights])  # row0: values of turning off; row1: v of turning on; columns: lights
+        self.n = np.zeros([2, n_blue_lights]).astype(np.int)
 
-
-class RewardAgent(Agent):
     def take_action(self, state):
         available_values = self.v[1-state[0], range(n_blue_lights)]
         best_actions = np.argwhere(available_values == np.max(available_values)).flatten()
@@ -47,13 +46,23 @@ class RewardAgent(Agent):
         switch_to = 1 - state[0, light_i]
         return light_i, switch_to
 
+
+class RewardAgent(FlatAgent):
     def update_values(self, old_state, action, new_state):
-        light_i, switch_to = action  # action in tuple-form: action = (light_i, switch_to)
+        light_i, switch_to = action
         reward = sum(new_state[0, :]) - sum(old_state[0, :])
-        self.v[switch_to, light_i] += alpha * (reward - self.v[switch_to, light_i])
+        self.v[switch_to, light_i] += alpha * (reward - self.v[switch_to, light_i])  # classic RL value update
 
 
-agent = RewardAgent()
+class NoveltyAgent(FlatAgent):
+    def update_values(self, old_state, action, new_state):
+        light_i, switch_to = action
+        self.n[switch_to, light_i] += 1
+        surprise = 1 / self.n[switch_to, light_i]
+        self.v[switch_to, light_i] += alpha * (surprise - self.v[switch_to, light_i])  # RL with surprise instead reward
+
+
+agent = NoveltyAgent()
 environment = Environment()
 
 for _ in range(n_trials):

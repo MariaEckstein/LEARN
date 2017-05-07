@@ -12,7 +12,7 @@ class FlatAgent(object):
         available_values = self.v[1-state[0], range(len(state[0]))]
         best_actions = np.argwhere(available_values == np.max(available_values)).flatten()
         worse_actions = np.argwhere(available_values < np.max(available_values)).flatten()
-        if (np.random.rand() > self.epsilon) | (len(worse_actions) == 0):
+        if (np.random.rand() > self.epsilon) and (len(worse_actions) == 0):
             light_i = np.random.choice(best_actions)
         else:
             light_i = np.random.choice(worse_actions)

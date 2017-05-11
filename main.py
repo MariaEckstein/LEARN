@@ -8,7 +8,7 @@ n_lights = 8   # number of level-0 lights (formerly know as "blue" lights); must
 n_lights_tuple = 2  # number of lights per level-0 tuple
 alpha = 0.75  # agent's learning rate
 epsilon = 0.1  # inverse of agent's greediness
-n_trials = 50  # number of trials in the game
+n_trials = 5  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
 

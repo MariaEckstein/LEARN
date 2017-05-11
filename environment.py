@@ -16,8 +16,8 @@ class Environment(object):
 
     def do_events(self, light_i):
         self.high_lev_change[:, :] = 0
-        for level in range(self.n_levels - 1):  # check for each level if a tuple_i is full
-            first_in_tuple = light_i - (light_i % self.n_lights_tuple)
+        first_in_tuple = light_i - (light_i % self.n_lights_tuple)
+        for level in range(self.n_levels - 1):  # check for each level if tuple is full
             tuple_i = range(first_in_tuple, first_in_tuple + self.n_lights_tuple)
             tuple_complete = np.all(self.state[level, tuple_i])  # check if all lights in tuple_i are on
             next_level_light = first_in_tuple // self.n_lights_tuple
@@ -26,6 +26,7 @@ class Environment(object):
                 self.state[level, tuple_i] = 0  # turn off lower-level lights
                 self.state[level + 1, next_level_light] = 1  # turn on next-level lights
                 self.high_lev_change[level, next_level_light] = 1
+            first_in_tuple = next_level_light - (next_level_light % self.n_lights_tuple)
 
 
 

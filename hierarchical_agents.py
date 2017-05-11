@@ -110,7 +110,7 @@ class NoveltyAgentH(HierarchicalAgent):
     It does not form options.
     """
     def update_values(self, old_state, action, new_state, high_lev_change):
-        selected_a, switch_to = action
+        switch_to, light_i = action
         novelty = self.measure_novelty(action, high_lev_change)
         self.v[switch_to, selected_a] += self.alpha * (novelty - self.v[switch_to, selected_a])  # Novelty instead reward
 

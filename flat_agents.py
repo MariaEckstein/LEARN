@@ -17,11 +17,11 @@ class FlatAgent(object):
         best_actions = np.argwhere(available_values == np.max(available_values)).flatten()
         worse_actions = np.argwhere(available_values < np.max(available_values)).flatten()
         if (np.random.rand() > self.epsilon) or (len(worse_actions) == 0):
-            light_i = np.random.choice(best_actions)
+            selected_a = np.random.choice(best_actions)
         else:
-            light_i = np.random.choice(worse_actions)
-        switch_to = 1 - state[0, light_i]
-        return switch_to, light_i
+            selected_a = np.random.choice(worse_actions)
+        switch_to = 1 - state[0, selected_a]
+        return switch_to, selected_a
 
 
 class RewardAgent(FlatAgent):
@@ -29,9 +29,8 @@ class RewardAgent(FlatAgent):
     This agent is driven by reward. It perceives reward when lights turn on.
     """
     def update_values(self, old_state, action, new_state, high_lev_change):
-        switch_to, light_i = action
         reward = sum(new_state[0, :]) - sum(old_state[0, :])
-        self.v[switch_to, light_i] += self.alpha * (reward - self.v[switch_to, light_i])  # classic RL value update
+        self.v[action] += self.alpha * (reward - self.v[action])  # classic RL value update
 
 
 class NoveltyAgentF(FlatAgent):
@@ -39,10 +38,9 @@ class NoveltyAgentF(FlatAgent):
     This agent is driven by novelty. The novelty of his actions decreases exponentially after the first time executed.
     """
     def update_values(self, old_state, action, new_state, high_lev_change):
-        switch_to, light_i = action
-        self.n[switch_to, light_i] += 1
-        novelty = 1 / self.n[switch_to, light_i]
-        self.v[switch_to, light_i] += self.alpha * (novelty - self.v[switch_to, light_i])  # RL with novelty instead reward
+        self.n[action] += 1
+        novelty = 1 / self.n[action]
+        self.v[action] += self.alpha * (novelty - self.v[action])  # RL with novelty instead reward
 
 
 class NoveltyRewardAgent(FlatAgent):
@@ -50,8 +48,7 @@ class NoveltyRewardAgent(FlatAgent):
     This agent is driven by novelty and reward. It's a combination of the RewardAgent and the NoveltyAgent.
     """
     def update_values(self, old_state, action, new_state, high_lev_change):
-        switch_to, light_i = action
-        self.n[switch_to, light_i] += 1
-        novelty = 1 / self.n[switch_to, light_i]
+        self.n[action] += 1
+        novelty = 1 / self.n[action]
         reward = sum(new_state[0, :]) - sum(old_state[0, :])
-        self.v[switch_to, light_i] += self.alpha * (novelty + reward - self.v[switch_to, light_i])  # RL with novelty instead reward
+        self.v[action] += self.alpha * (novelty + reward - self.v[action])  # RL with novelty instead reward

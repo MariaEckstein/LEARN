@@ -10,12 +10,12 @@ class Environment(object):
         self.high_lev_change = np.zeros((self.n_levels-1, self.n_lights)).astype(np.int)
 
     def respond(self, action):
-        light_i, switch_to = action  # action in tuple-form: action = (light_i, switch_to)
+        switch_to, light_i = action
         self.state[0, light_i] = switch_to
         return self.do_events(light_i)
 
     def do_events(self, light_i):
-        self.high_lev_change[:,:] = 0
+        self.high_lev_change[:, :] = 0
         for level in range(self.n_levels - 1):  # check for each level if a tuple is full
             n_lights_tuple = self.n_lights_tuple ** (1 + level)
             first_in_tuple = light_i - (light_i % n_lights_tuple)

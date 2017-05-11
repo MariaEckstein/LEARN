@@ -21,7 +21,7 @@ class FlatAgent(object):
         else:
             light_i = np.random.choice(worse_actions)
         switch_to = 1 - state[0, light_i]
-        return light_i, switch_to
+        return switch_to, light_i
 
 
 class RewardAgent(FlatAgent):

@@ -120,7 +120,7 @@ class NoveltyAgentH(HierarchicalAgent):
         # Count how often each higher-level event has occured
         if np.sum(high_lev_change) > 0:
             self.n[2:] += high_lev_change
-            event_novelty = 1 / self.n[2:][high_lev_change == 1][0]
+            event_novelty = np.sum(1 / self.n[2:][high_lev_change])
         else:
             event_novelty = 0
         return action_novelty + event_novelty

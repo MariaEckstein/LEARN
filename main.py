@@ -17,7 +17,7 @@ environment = Environment(n_levels, n_lights, n_lights_tuple)
 # Debugging
 for i in range(n_trials):
     old_state = environment.state.copy()
-    action = (1, i % n_lights)  # agent.take_action(old_state) #
+    action = (1, i % n_lights)  #agent.take_action(old_state) #
     environment.respond(action)
     # [high_lev_change, new_state] = [environment.high_lev_change, environment.state]
     agent.update_values(old_state, action, environment.state, environment.high_lev_change)

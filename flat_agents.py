@@ -13,7 +13,7 @@ class FlatAgent(object):
         self.epsilon = epsilon
 
     def take_action(self, state):
-        available_values = self.v[1-state[0], range(len(state[0]))]
+        available_values = self.v[1-state[0], range(state.shape[1])]
         best_actions = np.argwhere(available_values == np.max(available_values)).flatten()
         worse_actions = np.argwhere(available_values < np.max(available_values)).flatten()
         if (np.random.rand() > self.epsilon) or (len(worse_actions) == 0):

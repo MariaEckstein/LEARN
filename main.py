@@ -11,8 +11,6 @@ epsilon = 0.1  # inverse of agent's greediness
 n_trials = 5  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
-
-
 agent = NoveltyRewardAgent(alpha, epsilon, n_levels, n_lights, n_lights_tuple)
 environment = Environment(n_levels, n_lights, n_lights_tuple)
 

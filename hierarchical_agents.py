@@ -65,8 +65,8 @@ class HierarchicalAgent(object):
         self.level -= 1
         self.take_action(state)
 
-    def option_coord_to_index(self, action):
-        level, selected_a = action
+    def option_coord_to_index(self, coord):
+        level, selected_a = coord
         if level == 1:
             n_options_below = 0
         else:
@@ -80,25 +80,6 @@ class OptionAgent(HierarchicalAgent):
     This agent creates options.
     It is not driven by values and selects actions/options randomly.
     """
-    def handle_options(self, high_level_change, action):
-        change_positions = np.argwhere(high_level_change)
-        for i in range(len(change_positions)):  # if more than one higher-level lights turned on during one move
-            change_position = change_positions[i]
-            option_index = self.option_coord_to_index(change_position)  # get index of option
-            if self.o_blocked[change_position]:  # if the option doesn't exist yes (still blocked)
-                self.create_option(change_position, option_index)
-            self.o_v[action, option_index] = 1  # initialize value of the previous, good action
-
-    def create_option(self, change_position, option_index):
-        self.o_blocked[change_position] = False  # Un-block the option
-        self.o_v[:, :, option_index] = float('nan')  # block out all actions available to the option
-        level = change_position[0]
-        n_lights_level = self.n_lights // self.n_lights_tuple ** level
-        if n_lights_level == self.n_lights:
-            self.o_v[:, :, option_index] = 0  # initialize values of available actions to 0
-        else:
-            self.o_v[0, range(n_lights_level), option_index] = 0
-
 
 class NoveltyAgentH(HierarchicalAgent):
     """
@@ -119,3 +100,23 @@ class NoveltyAgentH(HierarchicalAgent):
         else:
             event_novelty = 0
         return action_novelty + event_novelty
+
+    def handle_options(self, high_lev_change, action):
+        change_positions = np.argwhere(high_lev_change)
+        for i in range(len(change_positions)):  # if more than one higher-level lights turned on during one move
+            change_position = change_positions[i]
+            coord = [change_position[0] + 1, change_position[1]]
+            option_index = self.option_coord_to_index(coord)  # get index of option
+            if self.o_blocked[change_position]:  # if the option doesn't exist yes (still blocked)
+                self.create_option(change_position, option_index)
+            # self.o_v[action, option_index] = 1  # initialize value of the previous, good action # DOESN'T WORK BECAUSE I WANT TO UPDATE THE VALUES OF OPTIONS, NOT JUST ACTIONS
+
+    def create_option(self, change_position, option_index):
+        self.o_blocked[change_position] = False  # Un-block the option
+        self.o_v[:, :, option_index] = float('nan')  # block out all actions available to the option
+        level = change_position[0]  # this is the level BELOW the option being created
+        n_lights_level = self.n_lights // self.n_lights_tuple ** level  # number of lights at the level BELOW option
+        if n_lights_level == self.n_lights:  # if option selects among basic actions
+            self.o_v[:, :, option_index] = 0  # initialize two rows to 0
+        else:  # if option selects among options
+            self.o_v[0, range(n_lights_level), option_index] = 0

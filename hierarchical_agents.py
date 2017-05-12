@@ -24,17 +24,30 @@ class HierarchicalAgent(object):
         self.level = 0  # where are we in the option?
 
     def take_action(self, state):
+        available_v = self.get_values(state)
+        action = self.select_action(available_v)
+        self.level, selected_a = action
+        if len(action) == 1 or self.level == 0:  # agent selected a basic action
+            selected_a = action[-1]
+            switch_to = 1 - state[0, selected_a]
+            return switch_to, selected_a
+        else:  # agent selected an option
+            self.initiate_option(action, state)
 
+    def get_values(self, state):
         # Get the values of the available actions / options
         if len(self.o_list) == 0:  # if option stack is empty, i.e., we have the choice among all actions and options
             available_v = self.v[1:].copy()
             available_v[0] = self.v[1-state[0], range(state.shape[1])]  # values of basic actions
             available_v[1:][self.o_blocked] = float('nan')  # block out option that haven't been discovered yet
+            # block out options that aren't available right now (light already on) => NO!
         else:  # if the option stack is not empty, i.e., we are inside an option
             available_v = self.o_v[:, :, self.o_list.pop()]  # get the values of the last option in the stack
             if self.level == 0:  # if the option refers to basic actions
                 available_v = available_v[1-state[0], range(state.shape[1])]
+        return available_v
 
+    def select_action(self, available_v):
         # Select an action / option, according to its value
         best_actions = np.argwhere(available_v == np.nanmax(available_v))
         worse_actions = np.argwhere(available_v < np.nanmax(available_v))
@@ -44,73 +57,47 @@ class HierarchicalAgent(object):
         else:
             select = np.random.choice(range(worse_actions.shape[0]))
             action = worse_actions[select]
-        self.level, selected_a = action
+        return action
 
-        # Return the selected action / go into the selected option
-        if len(action) == 1 or self.level == 0:  # agent selected a basic action
-            selected_a = action[-1]
-            switch_to = 1 - state[0, selected_a]
-            return switch_to, selected_a
-        else:  # agent selected an option
-            if self.level == 1:
-                n_options_below = 0
-            else:
-                n_tuples_level = self.n_lights // self.n_lights_tuple ** self.level
-                n_options_below = np.sum([n_tuples_level * self.n_lights_tuple ** i for i in range(1, self.level)])
-            selected_a = n_options_below + selected_a
-            self.o_list.append(selected_a)
-            self.level -= 1
-            self.take_action(state)
+    def initiate_option(self, action, state):
+        option_index = self.option_coord_to_index(action)
+        self.o_list.append(option_index)
+        self.level -= 1
+        self.take_action(state)
 
+    def option_coord_to_index(self, action):
+        level, selected_a = action
+        if level == 1:
+            n_options_below = 0
+        else:
+            n_tuples_level = self.n_lights // self.n_lights_tuple ** level
+            n_options_below = np.sum([n_tuples_level * self.n_lights_tuple ** i for i in range(1, level)])
+        return n_options_below + selected_a
 
-
-
-
-            # selected_a = selected_a / self.n_lights_tuple ** level
-            # if level == 1:
-            #     n_options_below = 0
-            # else:
-            #     n_tuples_level = self.n_lights // self.n_lights_tuple ** level
-            #     n_options_below = np.sum([n_tuples_level * self.n_lights_tuple ** i for i in range(1, level)]) - 1  # -1 because python indexing starts at 0
-            # selected_o = selected_a + n_options_below
-            # self.o_list.append(selected_o)  # option_i is the row number in self.o_v (0:1 for basic actions, etc.)
-            # self.take_action(state, level - 1)
-
-        # n_lights_tuple_l = self.n_lights_tuple ** level
-        # n_tuples_level = self.n_lights // n_lights_tuple_l
-        # value_indices = [n_lights_tuple_l * i for i in range(n_tuples_level)]
-        # available_v = values[value_indices]
 
 class OptionAgent(HierarchicalAgent):
     """
     This agent creates options.
     It is not driven by values and selects actions/options randomly.
     """
-    def create_option(self, new_state, high_level_change):
-        # Check that option doesn't exist yet
-        # Initiation set: all states in which the lights are off
-        # Termination set: all states in which the lights state[level, tuple] are on.
-        # option values self.o_v: look back in time; credit past actions/option according to how recent they were
+    def handle_options(self, high_level_change, action):
+        change_positions = np.argwhere(high_level_change)
+        for i in range(len(change_positions)):  # if more than one higher-level lights turned on during one move
+            change_position = change_positions[i]
+            option_index = self.option_coord_to_index(change_position)  # get index of option
+            if self.o_blocked[change_position]:  # if the option doesn't exist yes (still blocked)
+                self.create_option(change_position, option_index)
+            self.o_v[action, option_index] = 1  # initialize value of the previous, good action
 
-
-        # Make the option available
-        self.o_blocked += high_level_change
-
-        # Update the value of the option to 1
-        # self.v[]
-
-        # Update the within-option values
-
-
-
-        # update_options()
-        # update_action_values()
-        # update_option_values()
-        # train_options()
-        # select_action()
-
-    # def create_option(self, old_state, new_state):
-    #     self.i_option += 1
+    def create_option(self, change_position, option_index):
+        self.o_blocked[change_position] = False  # Un-block the option
+        self.o_v[:, :, option_index] = float('nan')  # block out all actions available to the option
+        level = change_position[0]
+        n_lights_level = self.n_lights // self.n_lights_tuple ** level
+        if n_lights_level == self.n_lights:
+            self.o_v[:, :, option_index] = 0  # initialize values of available actions to 0
+        else:
+            self.o_v[0, range(n_lights_level), option_index] = 0
 
 
 class NoveltyAgentH(HierarchicalAgent):
@@ -121,15 +108,13 @@ class NoveltyAgentH(HierarchicalAgent):
     """
     def update_values(self, old_state, action, new_state, high_lev_change):
         novelty = self.measure_novelty(action, high_lev_change)
-        self.v[action] += self.alpha * (novelty - self.v[action])  # Novelty instead reward
+        self.v[action] += self.alpha * (novelty - self.v[action])  # Does this already work for options?
 
     def measure_novelty(self, action, high_lev_change):
-        # Count how often each basic action has been performed
-        self.n[action] += 1
+        self.n[action] += 1  # Count how often each basic action has been performed
         action_novelty = 1 / self.n[action]
-        # Count how often each higher-level event has occured
         if np.sum(high_lev_change) > 0:
-            self.n[2:] += high_lev_change
+            self.n[2:] += high_lev_change  # Count how often each higher-level event has occurred
             event_novelty = np.sum(1 / self.n[2:][high_lev_change])
         else:
             event_novelty = 0

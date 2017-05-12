@@ -8,7 +8,7 @@ n_lights = 8   # number of level-0 lights (formerly know as "blue" lights); must
 n_lights_tuple = 2  # number of lights per level-0 tuple
 alpha = 0.75  # agent's learning rate
 epsilon = 0.1  # inverse of agent's greediness
-n_trials = 22  # number of trials in the game
+n_trials = 2  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
 agent = NoveltyAgentH(alpha, epsilon, n_levels, n_lights, n_lights_tuple)
@@ -19,12 +19,14 @@ for i in range(n_trials):
     old_state = environment.state.copy()
     action = agent.take_action(old_state) #(1, i % n_lights)  #
     environment.respond(action)
-    # [high_lev_change, new_state] = [environment.high_lev_change, environment.state]
-    # agent.update_values(old_state, action, environment.state, environment.high_lev_change)
+    # if np.sum(environment.high_lev_change) > 0:
+    #     agent.handle_options(high_level_change, action)
+    agent.update_values(old_state, action, environment.state, environment.high_lev_change)
     print(action)
     print(environment.high_lev_change)
     print(environment.state)
     print(agent.v)
+    print(agent.level)
 
 
 # The Real Code

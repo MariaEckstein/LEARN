@@ -1,0 +1,102 @@
+
+@article{sutton_between_1999,
+	title = {Between {MDPs} and semi-{MDPs}: {A} framework for temporal abstraction in reinforcement learning},
+	volume = {112},
+	issn = {0004-3702},
+	shorttitle = {Between {MDPs} and semi-{MDPs}},
+	url = {http://www.sciencedirect.com/science/article/pii/S0004370299000521},
+	doi = {10.1016/S0004-3702(99)00052-1},
+	abstract = {Learning, planning, and representing knowledge at multiple levels of temporal abstraction are key, longstanding challenges for AI. In this paper we consider how these challenges can be addressed within the mathematical framework of reinforcement learning and Markov decision processes (MDPs). We extend the usual notion of action in this framework to include options—closed-loop policies for taking action over a period of time. Examples of options include picking up an object, going to lunch, and traveling to a distant city, as well as primitive actions such as muscle twitches and joint torques. Overall, we show that options enable temporally abstract knowledge and action to be included in the reinforcement learning framework in a natural and general way. In particular, we show that options may be used interchangeably with primitive actions in planning methods such as dynamic programming and in learning methods such as Q-learning. Formally, a set of options defined over an MDP constitutes a semi-Markov decision process (SMDP), and the theory of SMDPs provides the foundation for the theory of options. However, the most interesting issues concern the interplay between the underlying MDP and the SMDP and are thus beyond SMDP theory. We present results for three such cases: (1) we show that the results of planning with options can be used during execution to interrupt options and thereby perform even better than planned, (2) we introduce new intra-option methods that are able to learn about an option from fragments of its execution, and (3) we propose a notion of subgoal that can be used to improve the options themselves. All of these results have precursors in the existing literature; the contribution of this paper is to establish them in a simpler and more general setting with fewer changes to the existing reinforcement learning framework. In particular, we show that these results can be obtained without committing to (or ruling out) any particular approach to state abstraction, hierarchy, function approximation, or the macro-utility problem.},
+	number = {1},
+	urldate = {2016-12-15},
+	journal = {Artificial Intelligence},
+	author = {Sutton and Precup, Doina and Singh, Satinder},
+	month = aug,
+	year = {1999},
+	keywords = {Hierarchical planning, Intra-option learning, Macroactions, Macros, Markov decision processes, Options, reinforcement learning, Semi-Markov decision processes, Subgoals, Temporal abstraction},
+	pages = {181--211}
+}
+
+@book{sutton_reinforcement_2017,
+	address = {Cambridge, MA; London, England},
+	edition = {2},
+	title = {Reinforcement {Learning}: {An} {Introduction}},
+	publisher = {MIT Press},
+	author = {Sutton, R. S. and Barto, A. G.},
+	year = {2017},
+	file = {Reinforcement Learning.pdf:C\:\\Users\\maria\\AppData\\Roaming\\Zotero\\Zotero\\Profiles\\a3wwptsq.default\\zotero\\storage\\G8UWF6N2\\Reinforcement Learning.pdf:application/pdf}
+}
+
+@inproceedings{singh_intrinsically_2004,
+	address = {Vancouver, B.C., Canada},
+	title = {Intrinsically motivated reinforcement learning},
+	booktitle = {18th {Annual} {Conference} on {Neural} {Information} {Processing} {Systems}},
+	author = {Singh, S. and Barto, A. G. and Chentanez, N.},
+	year = {2004}
+}
+
+@article{machado_learning_2016,
+	title = {Learning {Purposeful} {Behaviour} in the {Absence} of {Rewards}},
+	url = {http://arxiv.org/abs/1605.07700},
+	abstract = {Artificial intelligence is commonly defined as the ability to achieve goals in the world. In the reinforcement learning framework, goals are encoded as reward functions that guide agent behaviour, and the sum of observed rewards provide a notion of progress. However, some domains have no such reward signal, or have a reward signal so sparse as to appear absent. Without reward feedback, agent behaviour is typically random, often dithering aimlessly and lacking intentionality. In this paper we present an algorithm capable of learning purposeful behaviour in the absence of rewards. The algorithm proceeds by constructing temporally extended actions (options), through the identification of purposes that are "just out of reach" of the agent's current behaviour. These purposes establish intrinsic goals for the agent to learn, ultimately resulting in a suite of behaviours that encourage the agent to visit different parts of the state space. Moreover, the approach is particularly suited for settings where rewards are very sparse, and such behaviours can help in the exploration of the environment until reward is observed.},
+	urldate = {2017-05-13},
+	journal = {arXiv:1605.07700 [cs]},
+	author = {Machado, Marlos C. and Bowling, Michael},
+	month = may,
+	year = {2016},
+	note = {arXiv: 1605.07700},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Learning},
+	file = {arXiv\:1605.07700 PDF:C\:\\Users\\maria\\AppData\\Roaming\\Zotero\\Zotero\\Profiles\\a3wwptsq.default\\zotero\\storage\\NWUF9M5A\\Machado and Bowling - 2016 - Learning Purposeful Behaviour in the Absence of Re.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\maria\\AppData\\Roaming\\Zotero\\Zotero\\Profiles\\a3wwptsq.default\\zotero\\storage\\BV8IBTVQ\\1605.html:text/html}
+}
+
+@article{tessler_deep_2016,
+	title = {A {Deep} {Hierarchical} {Approach} to {Lifelong} {Learning} in {Minecraft}},
+	url = {http://arxiv.org/abs/1604.07255},
+	abstract = {We propose a lifelong learning system that has the ability to reuse and transfer knowledge from one task to another while efficiently retaining the previously learned knowledge-base. Knowledge is transferred by learning reusable skills to solve tasks in Minecraft, a popular video game which is an unsolved and high-dimensional lifelong learning problem. These reusable skills, which we refer to as Deep Skill Networks, are then incorporated into our novel Hierarchical Deep Reinforcement Learning Network (H-DRLN) architecture using two techniques: (1) a deep skill array and (2) skill distillation, our novel variation of policy distillation (Rusu et. al. 2015) for learning skills. Skill distillation enables the HDRLN to efficiently retain knowledge and therefore scale in lifelong learning, by accumulating knowledge and encapsulating multiple reusable skills into a single distilled network. The H-DRLN exhibits superior performance and lower learning sample complexity compared to the regular Deep Q Network (Mnih et. al. 2015) in sub-domains of Minecraft.},
+	urldate = {2017-05-13},
+	journal = {arXiv:1604.07255 [cs]},
+	author = {Tessler, Chen and Givony, Shahar and Zahavy, Tom and Mankowitz, Daniel J. and Mannor, Shie},
+	month = apr,
+	year = {2016},
+	note = {arXiv: 1604.07255},
+	keywords = {Computer Science - Artificial Intelligence, Computer Science - Learning},
+	file = {arXiv\:1604.07255 PDF:C\:\\Users\\maria\\AppData\\Roaming\\Zotero\\Zotero\\Profiles\\a3wwptsq.default\\zotero\\storage\\CURAMDPK\\Tessler et al. - 2016 - A Deep Hierarchical Approach to Lifelong Learning .pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\maria\\AppData\\Roaming\\Zotero\\Zotero\\Profiles\\a3wwptsq.default\\zotero\\storage\\2768964K\\1604.html:text/html}
+}
+
+@article{wittmann_striatal_2008,
+	title = {Striatal {Activity} {Underlies} {Novelty}-{Based} {Choice} in {Humans}},
+	volume = {58},
+	issn = {0896-6273},
+	url = {http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2535823/},
+	doi = {10.1016/j.neuron.2008.04.027},
+	abstract = {The desire to seek new and unfamiliar experiences is a fundamental behavioral tendency in humans and other species. In economic decision making, novelty seeking is often rational, insofar as uncertain options may prove valuable and advantageous in the long run. Here, we show that, even when the degree of perceptual familiarity of an option is unrelated to choice outcome, novelty nevertheless drives choice behavior. Using functional magnetic resonance imaging (fMRI), we show that this behavior is specifically associated with striatal activity, in a manner consistent with computational accounts of decision making under uncertainty. Furthermore, this activity predicts interindividual differences in susceptibility to novelty. These data indicate that the brain uses perceptual novelty to approximate choice uncertainty in decision making, which in certain contexts gives rise to a newly identified and quantifiable source of human irrationality.},
+	number = {6},
+	urldate = {2017-05-13},
+	journal = {Neuron},
+	author = {Wittmann, Bianca C. and Daw, Nathaniel D. and Seymour, Ben and Dolan, Raymond J.},
+	month = jun,
+	year = {2008},
+	pmid = {18579085},
+	pmcid = {PMC2535823},
+	pages = {967--973}
+}
+
+@article{botvinick_model-based_2014,
+	title = {Model-based hierarchical reinforcement learning and human action control},
+	volume = {369},
+	copyright = {. © 2014 The Authors. Published by the Royal Society under the terms of the Creative Commons Attribution License http://creativecommons.org/licenses/by/4.0/, which permits unrestricted use, provided the original author and source are credited.},
+	issn = {0962-8436, 1471-2970},
+	url = {http://rstb.royalsocietypublishing.org/content/369/1655/20130480},
+	doi = {10.1098/rstb.2013.0480},
+	abstract = {Recent work has reawakened interest in goal-directed or ‘model-based’ choice, where decisions are based on prospective evaluation of potential action outcomes. Concurrently, there has been growing attention to the role of hierarchy in decision-making and action control. We focus here on the intersection between these two areas of interest, considering the topic of hierarchical model-based control. To characterize this form of action control, we draw on the computational framework of hierarchical reinforcement learning, using this to interpret recent empirical findings. The resulting picture reveals how hierarchical model-based mechanisms might play a special and pivotal role in human decision-making, dramatically extending the scope and complexity of human behaviour.},
+	language = {en},
+	number = {1655},
+	urldate = {2017-05-13},
+	journal = {Phil. Trans. R. Soc. B},
+	author = {Botvinick, Matthew and Weinstein, Ari},
+	month = nov,
+	year = {2014},
+	pmid = {25267822},
+	pages = {20130480},
+	file = {Full Text PDF:C\:\\Users\\maria\\AppData\\Roaming\\Zotero\\Zotero\\Profiles\\a3wwptsq.default\\zotero\\storage\\4DVNWEFX\\Botvinick and Weinstein - 2014 - Model-based hierarchical reinforcement learning an.pdf:application/pdf;Snapshot:C\:\\Users\\maria\\AppData\\Roaming\\Zotero\\Zotero\\Profiles\\a3wwptsq.default\\zotero\\storage\\8GGQHAB5\\20130480.html:text/html}
+}

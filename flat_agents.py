@@ -7,26 +7,25 @@ class FlatAgent(object):
     Flat agents do not perceive higher-level lights and cannot create options.
     """
     def __init__(self, alpha, epsilon, n_levels, n_lights, n_lights_tuple):
-        self.v = np.zeros([2, n_lights])  # row0: values of turning off; row1: v of turning on; columns: lights
-        self.n = np.zeros([2, n_lights]).astype(np.int)
+        self.v = np.random.rand(n_lights)  # values of each basic action
+        self.n = np.zeros(n_lights).astype(np.int)
         self.alpha = alpha
         self.epsilon = epsilon
+        self.n_lights = n_lights
 
     def take_action(self, state):
-        available_v = self.v[1-state[0], range(state.shape[1])]
-        best_actions = np.argwhere(available_v == np.max(available_v)).flatten()
-        worse_actions = np.argwhere(available_v < np.max(available_v)).flatten()
-        if np.random.rand() > self.epsilon or len(worse_actions) == 0:
-            selected_a = np.random.choice(best_actions)
+        if np.random.rand() > self.epsilon:
+            action = np.argmax(self.v)
         else:
-            selected_a = np.random.choice(worse_actions)
-        switch_to = 1 - state[0, selected_a]
-        return switch_to, selected_a
+            action = np.random.choice(range(self.n_lights))
+        return action
 
 
 class RewardAgent(FlatAgent):
     """
     This agent is driven by reward. It perceives reward when lights turn on.
+    MAKES NO SENSE RIGHT NOW BECAUSE AGENTS ARE NOT SWITCHING ANY LIGHTS OFF.
+    SO THE STATE OF A BASIC ACTION CAN BE TURNED ON MULTIPLE TIMES.
     """
     def update_values(self, old_state, action, new_state, high_lev_change):
         reward = sum(new_state[0, :]) - sum(old_state[0, :])
@@ -46,6 +45,8 @@ class NoveltyAgentF(FlatAgent):
 class NoveltyRewardAgent(FlatAgent):
     """
     This agent is driven by novelty and reward. It's a combination of the RewardAgent and the NoveltyAgent.
+    MAKES NO SENSE RIGHT NOW BECAUSE AGENTS ARE NOT SWITCHING ANY LIGHTS OFF.
+    SO THE STATE OF A BASIC ACTION CAN BE TURNED ON MULTIPLE TIMES.
     """
     def update_values(self, old_state, action, new_state, high_lev_change):
         self.n[action] += 1

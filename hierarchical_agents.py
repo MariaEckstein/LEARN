@@ -19,111 +19,104 @@ class HierarchicalAgent(object):
         self.n_lights_tuple = n_lights_tuple
         self.n_options = np.sum([n_lights // n_lights_tuple ** i for i in range(n_levels)])
 
-        # Agent's thoughts about his options (values, novelty)
-        self.v = np.random.rand(n_levels, n_lights)  # values of actions and options; same shape as state
-        self.o_blocked = np.zeros([n_levels, n_lights], dtype=bool)  # INTEGRATE INTO agent.v LIKE FOR agent.o_v!
-        self.o_blocked[1:] = 1  # initially, all options are blocked (basic actions in row 0 stay 0)
+        # Agent's thoughts about his environment (values, novelty)
         self.n = np.zeros([n_levels, n_lights]).astype(np.int)  # counter for experience with events; same shape
-        self.o_v = np.empty([self.n_options - n_lights + 1, n_lights])  # in-option values; one row per option
-        row = 0
+        self.v = 0.5 * np.ones([n_levels, n_lights])  # values of actions and options; same shape as state
+        self.v[1:] = np.nan
+        self.o_v = np.full([self.n_options - n_lights + 1, n_lights], np.nan)  # in-option values; one row per option
+        row_ov = 0
         for level in range(n_levels):
             n_options_level = n_lights // (2 * n_lights_tuple ** level)
             for option in range(n_options_level):
-                self.o_v[row, :] = np.nan
                 n_lights_level = n_lights // n_lights_tuple ** level  # number of lights at level below option
-                self.o_v[row, range(n_lights_level)] = 0
-                row += 1
+                self.o_v[row_ov, range(n_lights_level)] = 0.5
+                row_ov += 1
 
         # Agent's memory about his plans and past actions
-        self.o_list = []  # contains the o_v rows of each option that is currently being executed
+        self.option_stack = []  # contains the o_v rows of each option that is currently being executed
         self.level = 0  # at which level are we in the option?
-        self.v_in_charge = np.zeros(n_lights)
-        self.actions = []
+        self.v_in_charge = np.zeros(n_lights)  # that's not the shape it will have
+        # self.actions = []  # (basic) actions taken in each trial
+        self.options = [list() for _ in range(n_levels)]  # options taken
 
     def take_action(self, state, events):
-        event_is = np.argwhere(events)
-        # if option stack is empty, we choose among all actions and options
-        if len(self.o_list) == 0:
-            values = self.v.copy()
-            values[self.o_blocked] = np.nan  # block out option that haven't been discovered yet
-            [self.level, action] = self.select_action(values)
-        # if we are inside an option, we choose an action according to in-option policy
-        else:
-            self.terminate_option(event_is)  # first check if we terminate option (reached sub-goal or got distracted)
-            action = self.select_action(self.v_in_charge)
-            # print("Just executed action", action, "inside option", self.o_list)
-        # if selected action is not at basic level, we trickle down through the options until we reach the basic level
-        if self.level > 0:
-            print("Selected option", self.option_coord_to_index([self.level, action]).astype(int))
-            action = self.trickle_down_hierarchy(action)
-        self.actions.append(action)
+        novelty = len(np.argwhere(events))
+        self.create_options(events, novelty)  # if an event happened, create the corresponding option
+        if len(self.option_stack) == 0:  # we're not inside an option -> choose among all the possibilities
+            self.v_in_charge = self.v.copy()
+            option = self.select_option()
+            self.level = option[0]
+        else:  # we're inside an option -> follow option policy
+            print("Inside option!")
+            option = self.follow_option(events, novelty)  # update o_v; check if option terminates, if yes update v
+        print(option)
+        action = self.get_basic_action(option)  # trickle down hierarchy until we reach basic level
+        self.options[self.level].append(action[1])
         return action
 
-    def trickle_down_hierarchy(self, action):
-        while self.level > 0:
-            print("Trickling down levels... now at level", self.level, "in option", self.o_list)
-            option_index = self.option_coord_to_index([self.level, action]).astype(int)
-            self.o_list.append(option_index)
-            self.v_in_charge = self.o_v[self.o_list[-1], :]  # get the values of the last option in the stack
-            self.level -= 1
-            return self.select_action(self.v_in_charge)
+    def create_options(self, events, novelty):
+        current_events = np.argwhere(events)
+        for event in current_events:
+            if np.isnan(self.v[event[0], event[1]]):  # if option has not yet been discovered
+                self.v[event[0], event[1]] = novelty  # initialize it
+                print("Option", self.option_coord_to_index(event), event, "with value", novelty, "created!")
+            # Not sure how to update in-option policies... I can't just use the last action because that's always
+            # a basic action, and I don't know which one was the last higher-level option that I chose...
+            # RPE = 1 - self.o_v[event_index, self.options[self.level][-1]]  # ????????????
+            # self.o_v[event_index, self.options[self.level][-1]] += self.alpha * RPE  # ?????????????
 
-    def learn(self, events):
-        # if we encountered novel events, we create new options
-        event_is = np.argwhere(events)
-        for i in range(len(event_is)):
-            self.create_option(event_is[i])
-        # WE ALSO USE NOVELTY TO UPDATE BASIC ACTION VALUES
-        RPE = len(event_is) - self.v[0, self.actions[-1]]
-        self.v[0, self.actions[-1]] += self.alpha * RPE
+    def follow_option(self, events, novelty):
+        current_option = self.option_stack[-1]  # option_stack is in index form; no basic actions
+        previous_option = [self.level, self.options[self.level][-1]]  # options is in ... form; ...
+        current_events = np.argwhere(events)
+        current_events_i = np.array([self.option_coord_to_index(current_events[i]) for i in range(len(current_events))])
+        goal_achieved = np.any(current_events_i == current_option)
+        RPE = goal_achieved - self.o_v[current_option, previous_option[1]]
+        self.o_v[current_option, previous_option[1]] += self.alpha * RPE
+        got_distracted = self.distraction > np.random.rand()
+        if goal_achieved or got_distracted:
+            self.option_stack.pop()  # check off current option
+            pre_previous_option = [self.level+1, self.options[self.level+1][-1]]
+            RPE = novelty - self.v[pre_previous_option[0], pre_previous_option[1]]
+            self.v[pre_previous_option[0], pre_previous_option[1]] += RPE
+            print("Goal achieved:", goal_achieved, "; got distracted:", got_distracted, "Will now do", self.option_stack)
+            if len(self.option_stack) == 0:
+                self.v_in_charge = self.v.copy()
+                return [self.level, self.select_option()[1]]
+            else:
+                self.v_in_charge = self.o_v[self.option_stack[-1], :]
+                self.level += 1
+                return self.follow_option(events, novelty)
+        else:
+            return [self.level, self.select_option()[1]]
 
-    def create_option(self, event):
-        option_index = self.option_coord_to_index(event).astype(int)
-        # initialize option
-        if self.o_blocked[event[0], event[1]]:
-            self.o_blocked[event[0], event[1]] = False  # Un-block option
-            self.v[event[0], event[1]] = 1  # initialize option value
-            print("Option", option_index, "created!")
-        # update in-option values
-        self.o_v[option_index, self.actions[-1]] = 1  # ONLY WORKS FOR LEVEL-1 OPTIONS; HIGHER-LEVEL OPTIONS NEED TO UPDATE BASED ON OPTIONS, NOT self.actions!
-        print("New in-option policy:", self.o_v[option_index, :])
-
-    def terminate_option(self, event_is):
-        # Case 1: We achieved the sub-goal
-        option = self.o_list[-1]
-        current_events = np.array([self.option_coord_to_index(event_is[i]) for i in range(len(event_is))])
-        if np.any(current_events == option):
-            self.resume_higher_option(option)
-        # Case 2: We got distracted
-        elif self.distraction > np.random.rand():
-            print("Oooops, got distracted and quit option", option)
-            self.o_list = []
-            self.v_in_charge = self.v[0]  # SHOULD BE self.v, BUT THAT WOULDN'T WORK IN select_action
-        # MISSING: UPDATE self.v!
-            # Case 1: RPE according to novelty of sub-goal event
-            # Case 2: RPE with 0 novelty
-
-    def resume_higher_option(self, option):
-        self.o_list.pop()  # get out of current option
-        print("Sub-goal", option, "achieved! Now doing", self.o_list)
-        if len(self.o_list) == 0:  # if we worked our way through the whole hierarchy of options, we're free again!
-            self.v_in_charge = self.v[0]  # SHOULD BE self.v, BUT THAT WOULDN'T WORK IN select_action
-            self.o_v[option, self.actions[-1]] = 1  # SHOULD WORK - update in-option values
-            print("New in-option policy:", self.o_v[option, :])
-        else:  # if we're still inside an option, put it in charge again
-            self.v_in_charge = self.o_v[self.o_list[-1], :]
-            self.level += 1  # we just moved one level up
-            self.o_v[self.o_list[-1], option] = 1  # SHOULD WORK - update in-option values
-            print("New in-option policy:", self.o_list[-1])
-
-    def select_action(self, values):
+    def select_option(self):
+        values = self.v_in_charge
+        if len(values.shape) == 1:  # values is just 1 row
+            nans = np.full([1, len(values)], np.nan)  # WORKING?
+            values = np.vstack([values, nans])
         if np.random.rand() > self.epsilon:
-            action = np.argwhere(values == np.nanmax(values))[0]
+            option = np.argwhere(values == np.nanmax(values))[0]
         else:
-            available_actions = np.argwhere(~ np.isnan(values))
-            select = np.random.choice(range(len(available_actions)))
-            action = available_actions[select]
-        return action
+            available_options = np.argwhere(~ np.isnan(values))
+            select = np.random.choice(range(len(available_options)))
+            option = available_options[select]
+        return option
+
+    def get_basic_action(self, option):
+        if self.level == 0:
+            print("Returning an option!", option)
+            return option
+        else:
+            print("Trickling down levels... now in option", self.option_stack, option)
+            self.options[self.level].append(option[1])
+            option_i = self.option_coord_to_index(option).astype(int)
+            self.option_stack.append(option_i)
+            self.level -= 1
+            self.v_in_charge = self.o_v[self.option_stack[-1], :]  # get the values of the new option
+            option = [self.level, self.select_option()[1]]
+            print(self.level)
+            return self.get_basic_action(option)
 
     def option_coord_to_index(self, coord):
         level, selected_a = coord

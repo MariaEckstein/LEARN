@@ -15,7 +15,7 @@ n_agents = 1
 alpha = 0.75  # agent's learning rate
 epsilon = 0.5  # inverse of agent's greediness
 distraction = 0.01  # probability option terminates at each step
-n_trials = 2000  # number of trials in the game
+n_trials = 500  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
 # Code for flat agents
@@ -28,14 +28,8 @@ for ag in range(n_agents):
     for trial in range(n_trials):
         old_state = env.state.copy()
         action = agent.take_action(old_state, env.events)
-        env.make_events(action)
+        env.make_events(action[1])
         new_state = env.state
-        # print(old_state)
-        # print(action)
-        # print(env.events)
-        # agent.update_values(old_state, action, new_state, event)
-        agent.learn(env.events)
-        # lights_on[trial, ag] = np.sum(new_state[0])
         if np.all(new_state[0]):
             print("Won! Final state:", env.state)
             break

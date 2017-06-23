@@ -11,7 +11,7 @@ class Environment(object):
 
     def make_events(self, action):
         self.state[0, action] = 1
-        self.events[:,:] = 0
+        self.events[:] = 0
         first_in_tuple = action - (action % self.n_lights_tuple)
         for level in range(self.n_levels - 1):  # check for each level if tuple is full
             tuple_i = range(first_in_tuple, first_in_tuple + self.n_lights_tuple)

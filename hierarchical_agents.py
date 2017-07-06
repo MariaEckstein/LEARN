@@ -1,5 +1,7 @@
 import numpy as np
 
+# TDs:
+# - learn during option execution, not just at the end
 
 class HierarchicalAgent(object):
     """
@@ -139,18 +141,13 @@ class HierarchicalAgent(object):
         index = n_options_below + selected_a
         return int(index)
 
-# - select option
-# - get in_option values
-# - select actions according to option values until option terminates
-# - when option terminates, take over values from the option in the level above
-# - after termination, update value of the option according to novelty of resulting event
-# - also update in_option values to learn how to achieve the event next time
 
 class OptionAgent(HierarchicalAgent):
     """
     This agent creates options.
     It is not driven by values and selects actions/options randomly.
     """
+
 
 class NoveltyAgentH(HierarchicalAgent):
     """
@@ -159,12 +156,3 @@ class NoveltyAgentH(HierarchicalAgent):
     It does not form options.
     """
 
-    def measure_novelty(self, action, event):
-        self.n[event] += 1  # Count how often each action has been performed
-        event_novelty = 1 / self.n[action]
-        if np.sum(event) > 0:
-            self.n[2:] += event  # Count how often each higher-level event has occurred
-            event_novelty = np.sum(1 / self.n[2:][event])
-        else:
-            event_novelty = 0
-        return event_novelty + event_novelty

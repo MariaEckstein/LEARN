@@ -9,10 +9,13 @@ class Environment(object):
         self.state = np.zeros((self.n_levels, self.n_lights), dtype=bool)
         self.events = np.zeros((self.n_levels, self.n_lights), dtype=bool)
 
+    def switch_lights(self, action):
+        self.state[action[0], action[1]] = 1
+        return self.state.copy()
+
     def make_events(self, action):
-        self.state[0, action] = 1
         self.events[:] = 0
-        first_in_tuple = action - (action % self.n_lights_tuple)
+        first_in_tuple = action[1] - (action[1] % self.n_lights_tuple)
         for level in range(self.n_levels - 1):  # check for each level if tuple is full
             tuple_i = range(first_in_tuple, first_in_tuple + self.n_lights_tuple)
             tuple_complete = np.all(self.state[level, tuple_i])  # check if all lights in tuple_i are on
@@ -23,4 +26,4 @@ class Environment(object):
                 self.state[level + 1, next_level_light] = 1  # turn on next-level lights
                 self.events[level + 1, next_level_light] = 1  # make a note of this event
             first_in_tuple = next_level_light - (next_level_light % self.n_lights_tuple)
-        return self.events
+        return self.events.copy()

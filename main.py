@@ -33,7 +33,7 @@ for ag in range(n_agents):
         inter_state = env.switch_lights(action)
         events = env.make_events(action)
         print("Events:", np.argwhere(events))
-        agent.learn(old_state, events, action)
+        agent.learn(old_state, events)
         if np.all(old_state[0]):
             print("Won! Final state:", env.state)
             break

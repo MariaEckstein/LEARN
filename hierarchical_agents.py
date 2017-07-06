@@ -22,7 +22,6 @@ class HierarchicalAgent(object):
         # Agent's thoughts about its environment (values, novelty)
         self.initial_value = 0.5
         self.n = np.zeros([n_levels, n_lights])  # event counter
-        self.n[1:] = np.nan
         self.v = self.initial_value * np.ones([n_levels, n_lights])  # feature weights (thetas) for actions and options
         self.v[1:] = np.nan  # undefined for options
         self.o_theta = np.full([self.n_options - n_lights + 1, n_lights, n_lights], np.nan)  # in-option features
@@ -48,18 +47,19 @@ class HierarchicalAgent(object):
             values = self.get_option_values(self.option_stack[-1], old_state)
         # Select (higher-level) option
         option = self.select_option(values)
+        print("Selected option", option)
         # Find basic-level action to execute
         if option[0] == 0:  # level == 0 means we selected a basic action -> return it right away
             return option
         else:  # level > 0 means we selected a higher-level option -> use its policy for option selection
-            self.theta_in_charge = self.o_theta[self.option_stack[-1], :, :]  # get the thetas of this option
-            print("Trickling down levels - starting in option", option)
+            self.theta_in_charge = self.o_theta[self.option_coord_to_index(self.option_stack[-1]), :, :]  # get the thetas of this option
             return self.take_action(old_state)
 
     def get_option_values(self, option, old_state):
         values = np.full([self.n_levels, self.n_lights], np.nan)  # initialize value array
         features = 1 - old_state[option[0]-1]  # features indicate which lights are OFF
         option_values = np.dot(self.theta_in_charge, features)  # calculate values from thetas
+        print("option_values:", np.round(option_values, 2), "self.theta_in_charge", np.round(self.theta_in_charge, 2), "features", features)
         values[option[0]-1, :] = option_values
         return values
 
@@ -88,17 +88,17 @@ class HierarchicalAgent(object):
         if len(self.option_stack) == 0:  # all options have terminated -> done
             self.theta_in_charge = []  # not necessary but will lead to errors if there's a bug -> debugging
             return []
-        else:  # there are options in the stack -> see if the lowest-level one has terminated
+        else:  # there are options in the stack -> check if they have terminated, staring at the lowest-level one
             option = self.option_stack[-1]
             [goal_achieved, distracted] = self.check_if_goal_achieved_distracted(option, events)  # SHOULD ALSO BE ABLE TO GET DISTRACTED IN HIGHER-LEVEL OPTIONS!
-            if goal_achieved or distracted:  # option terminated -> update v and in-option thetas
+            if goal_achieved or distracted:  # option terminated -> update v and - for higher levels - in-option thetas
                 self.option_stack.pop()
-                self.update_v(option, goal_achieved)
-                if option[0] > 0:
-                    self.update_theta(option, goal_achieved, old_state)  # ONLY FOR HIGHER-ORDER OPTIONS!
+                self.update_v(option, goal_achieved)  # all options update their values
+                if option[0] > 0:  # higher-level options also update their in-option policy
+                    self.update_theta(option, goal_achieved, old_state)
                     self.theta_in_charge = self.o_theta[self.option_coord_to_index(option), :, :]
                     print("For option", option, "goal was achieved:", goal_achieved, "; got distracted:", distracted,
-                          "new theta_in_charge:", self.o_theta[self.option_coord_to_index(option), :, :])
+                          ". New theta_in_charge:\n", np.round(self.o_theta[self.option_coord_to_index(option), :, :], 2))
                 return self.update_terminated_options(events, old_state)
             else:  # option has not terminated -> repetition would lead to an infinite loop until agent gets distracted
                 print("Option", option, "did not terminate; option stack:", self.option_stack, "; no learning.")
@@ -108,23 +108,24 @@ class HierarchicalAgent(object):
         novelty = 1 / self.n[option[0], option[1]]
         RPE = goal_achieved * novelty - self.v[option[0], option[1]]
         self.v[option[0], option[1]] += self.alpha * RPE
-        print("New v of option", option, ":", np.round(self.v, 2))
+        print("New v (changed option", option, "using RPE", round(RPE, 2), "):\n", np.round(self.v, 2))
 
     def update_theta(self, option, goal_achieved, old_state):
+        thetas = self.o_theta[self.option_coord_to_index(option), option[1], :].copy()
         features = 1 - old_state[option[0]-1]
-        thetas = self.o_theta[self.option_coord_to_index(option), option[1], :]
         RPE = goal_achieved - np.dot(thetas, features)
         self.o_theta[self.option_coord_to_index(option), option[1], :] += self.alpha * RPE * features
         print("New theta of option", option, ":",
               np.round(self.o_theta[self.option_coord_to_index(option), option[1], :], 2))
+        print("Used RPE", RPE, "on these features:", features, "and these thetas:", thetas)
 
     def create_option(self, event):
         self.v[event[0], event[1]] = self.initial_value  # initialize new option's value
         self.option_stack.append(event)  # add new option to option stack (has already been reached this trial)
-        print("Option", event, "with v[", event, "]", self.v[event[0], event[1]], "created!")
+        print("Created option", event)
 
     def check_if_goal_achieved_distracted(self, option, events):
-        goal_achieved = any([event == option for event in events])  # did the event occur that the option targets?
+        goal_achieved = any([np.all(option == event) for event in events])  # did the event occur that the option targets?
         distracted = self.distraction > np.random.rand()
         return [goal_achieved, distracted]
 

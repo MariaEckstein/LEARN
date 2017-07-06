@@ -28,11 +28,11 @@ for ag in range(n_agents):
     for trial in range(n_trials):
         print("\n TRIAL", trial)
         old_state = env.state.copy()
-        print("Old state:", old_state)
+        print("Old state:\n", old_state)
         action = agent.take_action(old_state)
         inter_state = env.switch_lights(action)
         events = env.make_events(action)
-        print("Events:", np.argwhere(events))
+        print("Events:\n", np.argwhere(events))
         agent.learn(old_state, events)
         if np.all(old_state[0]):
             print("Won! Final state:", env.state)

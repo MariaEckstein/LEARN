@@ -15,6 +15,9 @@ class Environment(object):
 
     def make_events(self, action):
         self.events[:] = 0
+        # record basic events
+        self.events[action[0], action[1]] = 1
+        # check for events on higher levels
         first_in_tuple = action[1] - (action[1] % self.n_lights_tuple)
         for level in range(self.n_levels - 1):  # check for each level if tuple is full
             tuple_i = range(first_in_tuple, first_in_tuple + self.n_lights_tuple)
@@ -23,7 +26,7 @@ class Environment(object):
             # next_level_off = not self.state[level + 1, next_level_light]  # check if next-level light is off
             if tuple_complete:  # and next_level_off:
                 self.state[level, tuple_i] = 0  # turn off lower-level lights
-                self.state[level + 1, next_level_light] = 1  # turn on next-level lights
-                self.events[level + 1, next_level_light] = 1  # make a note of this event
+                self.state[level + 1, next_level_light] = 1  # turn on next-level light
+                self.events[level + 1, next_level_light] = 1  # note this event
             first_in_tuple = next_level_light - (next_level_light % self.n_lights_tuple)
         return self.events.copy()

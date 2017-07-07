@@ -99,11 +99,11 @@ class HierarchicalAgent(object):
     def select_option(self, values):
         print("FUNCTION select_option")
         if np.random.rand() > self.epsilon:
-            option = np.argwhere(values == np.nanmax(values))[0]
+            selected_options = np.argwhere(values == np.nanmax(values))
         else:
-            available_options = np.argwhere(~ np.isnan(values))
-            select = np.random.choice(range(len(available_options)))
-            option = available_options[select]
+            selected_options = np.argwhere(~ np.isnan(values))
+        select = np.random.choice(range(len(selected_options)))
+        option = selected_options[select]
         self.option_stack.append(option)  # put this option on top of the option stack
         self.history.append(option)  # for data analysis / debugging
         return option
@@ -164,13 +164,6 @@ class HierarchicalAgent(object):
         print("New theta of current_option", current_option, ":", np.round(theta_previous_option, 2))
         print("Used RPE", RPE, "on these features:", features)
 
-    def get_maxQ(self, current_option, new_state):
-        print("FUNCTION get_maxQ")
-        values = self.get_option_values(current_option, new_state)  # get in-option values of current option
-        maxQ = np.nanmax(values)
-        print("maxQ:", maxQ)
-        return maxQ
-
     def create_option(self, event):
         print("FUNCTION create_option")
         self.v[event[0], event[1]] = self.initial_value  # initialize new option's value
@@ -192,6 +185,13 @@ class HierarchicalAgent(object):
             n_options_below = np.sum([n_tuples_level * self.n_lights_tuple ** i for i in range(1, level)])
         index = n_options_below + selected_a
         return int(index)
+
+    def get_maxQ(self, current_option, new_state):
+        print("FUNCTION get_maxQ")
+        values = self.get_option_values(current_option, new_state)  # get in-option values of current option
+        maxQ = np.nanmax(values)
+        print("maxQ:", maxQ)
+        return maxQ
 
 
 class OptionAgent(HierarchicalAgent):

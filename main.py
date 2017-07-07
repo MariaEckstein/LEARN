@@ -14,8 +14,9 @@ n_lights_tuple = 2  # number of lights per level-0 tuple
 n_agents = 1
 alpha = 0.5  # agent's learning rate
 epsilon = 0.2  # inverse of agent's greediness
+gamma = 0.9
 distraction = 0.1  # probability option terminates at each step
-n_trials = 25  # number of trials in the game
+n_trials = 250  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
 # Code for flat agents
@@ -23,17 +24,18 @@ lights_on = np.zeros([n_trials, n_agents])
 for ag in range(n_agents):
     # print("\n AGENT", ag)
     # agent = NoveltyAgentF(alpha, epsilon, n_levels, n_lights, n_lights_tuple)
-    agent = NoveltyAgentH(alpha, epsilon, distraction, n_levels, n_lights, n_lights_tuple)
+    agent = NoveltyAgentH(alpha, epsilon, gamma, distraction, n_levels, n_lights, n_lights_tuple)
     env = Environment(n_levels, n_lights, n_lights_tuple)
     for trial in range(n_trials):
         print("\n TRIAL", trial)
         old_state = env.state.copy()
         print("Old state:\n", old_state)
         action = agent.take_action(old_state)
-        inter_state = env.switch_lights(action)
+        env.switch_lights(action)
         events = env.make_events(action)
         print("Events:\n", np.argwhere(events))
-        agent.learn(old_state, events)
+        new_state = env.state.copy()
+        agent.learn(old_state, events, new_state)
         if np.all(old_state[0]):
             print("Won! Final state:", env.state)
             break

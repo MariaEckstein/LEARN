@@ -33,9 +33,6 @@ for ag in range(n_agents):
         old_state = env.state.copy()
         print("Old state:\n", old_state)
         action = agent.take_action(old_state)
-        # action_display = np.zeros([n_levels, n_lights])
-        # action_display[action[0], action[1]] = 1
-        # print(action_display)
         env.switch_lights(action)
         events = env.make_events(action)
         print("Events:\n", np.argwhere(events))
@@ -45,24 +42,24 @@ for ag in range(n_agents):
             print("Won! Final state:", env.state)
             break
 
-lights_on_NF = lights_on
-v_turn_on_NF = v_on
-v_turn_off_NF = v_off
-trials = np.arange(lights_on_NF.shape[0])
-v_on = np.mean(v_turn_on_NF, 1)
-v_off = np.mean(v_turn_off_NF, 1)
-
-plt.figure()
-n_lights_on = np.mean(lights_on_NF, 1)
-ax = sns.regplot(x=trials, y=n_lights_on, fit_reg=False, label="Novelty & reward flat.")
-ax.set(xlabel="Trial", ylabel="Number lights on")
-ax.legend()
-
-plt.figure()
-ax2 = sns.regplot(x=trials, y=v_on, fit_reg=False, label="Value on")
-ax2 = sns.regplot(x=trials, y=v_off, fit_reg=False, label="Value off")
-ax2.set(xlabel="Trial", ylabel="Value")
-ax2.legend()
+# lights_on_NF = lights_on
+# v_turn_on_NF = v_on
+# v_turn_off_NF = v_off
+# trials = np.arange(lights_on_NF.shape[0])
+# v_on = np.mean(v_turn_on_NF, 1)
+# v_off = np.mean(v_turn_off_NF, 1)
+#
+# plt.figure()
+# n_lights_on = np.mean(lights_on_NF, 1)
+# ax = sns.regplot(x=trials, y=n_lights_on, fit_reg=False, label="Novelty & reward flat.")
+# ax.set(xlabel="Trial", ylabel="Number lights on")
+# ax.legend()
+#
+# plt.figure()
+# ax2 = sns.regplot(x=trials, y=v_on, fit_reg=False, label="Value on")
+# ax2 = sns.regplot(x=trials, y=v_off, fit_reg=False, label="Value off")
+# ax2.set(xlabel="Trial", ylabel="Value")
+# ax2.legend()
 
 # # Debugging
 # for i in range(n_trials):

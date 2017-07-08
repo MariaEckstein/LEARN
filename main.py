@@ -12,10 +12,10 @@ from environment import Environment
 n_lights = 8   # number of level-0 lights (formerly know as "blue" lights); must be n_lights_tuple ** x
 n_lights_tuple = 2  # number of lights per level-0 tuple
 n_agents = 1
-alpha = 0.5  # agent's learning rate
+alpha = 0.7  # agent's learning rate
 epsilon = 0.2  # inverse of agent's greediness
 gamma = 0.9
-distraction = 0.1  # probability option terminates at each step
+distraction = 0.2  # probability option terminates at each step
 n_trials = 250  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
@@ -24,13 +24,18 @@ lights_on = np.zeros([n_trials, n_agents])
 for ag in range(n_agents):
     # print("\n AGENT", ag)
     # agent = NoveltyAgentF(alpha, epsilon, n_levels, n_lights, n_lights_tuple)
-    agent = NoveltyAgentH(alpha, epsilon, gamma, distraction, n_levels, n_lights, n_lights_tuple)
+    agent = NoveltyAgentH(alpha, epsilon, gamma, distraction,
+                          n_levels, n_lights, n_lights_tuple, "verbose")
     env = Environment(n_levels, n_lights, n_lights_tuple)
     for trial in range(n_trials):
         print("\n TRIAL", trial)
+        print("Option stack:", agent.option_stack)
         old_state = env.state.copy()
         print("Old state:\n", old_state)
         action = agent.take_action(old_state)
+        # action_display = np.zeros([n_levels, n_lights])
+        # action_display[action[0], action[1]] = 1
+        # print(action_display)
         env.switch_lights(action)
         events = env.make_events(action)
         print("Events:\n", np.argwhere(events))

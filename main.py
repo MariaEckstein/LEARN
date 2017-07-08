@@ -16,7 +16,7 @@ alpha = 0.7  # agent's learning rate
 epsilon = 0.2  # inverse of agent's greediness
 gamma = 0.9
 distraction = 0.2  # probability option terminates at each step
-n_trials = 250  # number of trials in the game
+n_trials = 50  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
 # Code for flat agents

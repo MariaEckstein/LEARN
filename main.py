@@ -14,7 +14,7 @@ n_lights_tuple = 2  # number of lights per level-0 tuple
 n_agents = 1
 alpha = 0.7  # agent's learning rate
 epsilon = 0.2  # inverse of agent's greediness
-gamma = 0.9
+# gamma = 0.9
 distraction = 0.2  # probability option terminates at each step
 n_trials = 50  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
@@ -25,14 +25,14 @@ for ag in range(n_agents):
     # print("\n AGENT", ag)
     env = Environment(n_levels, n_lights, n_lights_tuple)
     # agent = NoveltyAgentF(alpha, epsilon, env)
-    agent = NoveltyAgentH(alpha, epsilon, gamma, distraction, env)
+    agent = NoveltyAgentH(alpha, epsilon, distraction, env)
     for trial in range(n_trials):
         old_state = env.state.copy()
         action = agent.take_action(old_state)
         env.switch_lights(action)
         events = env.make_events(action)
         new_state = env.state.copy()
-        agent.learn(old_state, events, new_state)
+        agent.learn(old_state, events)
 
 import matplotlib.pyplot as plt
 

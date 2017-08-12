@@ -1,4 +1,6 @@
 import numpy as np
+from theta import Theta
+from v import V
 
 # Update:
 # - took out OFF action
@@ -37,133 +39,88 @@ import numpy as np
 # - add eligibility traces -> backward view -> people recall multiple actions they took before an event
 # - humans know that each light belongs to only one group -> reduce values of lights with high values in another group?
 
+
 class HierarchicalAgent(object):
     """
     This class encompasses all hierarchical agents.
     Hierarchical agents perceive higher-level lights and/or create options.
     """
-    def __init__(self, alpha, epsilon, gamma, distraction, env):
+    def __init__(self, alpha, epsilon, distraction, env):
 
         # Agent's RL features
         self.alpha = alpha  # learning rate
         self.epsilon = epsilon  # greediness
-        self.gamma = gamma  # future discounting
         self.distraction = distraction  # propensity to quit unfinished options
 
-        # Characteristics of the environment
-        self.n_levels = env.n_levels
-        self.n_lights = env.n_lights
-        self.n_lights_tuple = env.n_lights_tuple
-        self.n_options = np.sum([env.n_lights // env.n_lights_tuple ** i for i in range(env.n_levels)])
+        # Agent's thoughts about its environment (novelty, values, theta)
+        self.n = np.zeros([env.n_levels, env.n_lights])  # event counter = inverse novelty
+        self.v = V(env)
+        self.theta = Theta(env)
 
-        # Agent's thoughts about its environment (values, novelty)
-        self.initial_value = 1 / env.n_lights_tuple / 2
-        self.initial_theta = 1 / env.n_lights / 2
-        self.n = np.zeros([env.n_levels, env.n_lights])  # event counter
-        self.v = self.initial_value * np.ones([env.n_levels, env.n_lights])  # values of actions and options
-        self.v[1:] = np.nan  # undefined for options
-        self.o_theta = np.full([self.n_options - env.n_lights + 1, env.n_lights, env.n_lights], np.nan)  # in-option features
-        row_ot = 0
-        for level in range(env.n_levels):
-            n_options_level = env.n_lights // (2 * env.n_lights_tuple ** level)
-            for option in range(n_options_level):
-                n_lights_level = env.n_lights // env.n_lights_tuple ** level  # number of lights at level below option
-                self.o_theta[row_ot, range(n_lights_level), :] = self.initial_theta
-                row_ot += 1
-
-        # Agent's memory about his plans and past actions
+        # Agent's plans and memory about his past actions
         self.option_stack = []  # stack of the option(s) that are currently guiding behavior
-        self.history = []
+        self.history = []  # for analysis / debugging
 
     def take_action(self, old_state):
-        if len(self.option_stack) == 0:  # not inside an option -> select option based on agent.v
-            values = self.v.copy()
-        else:  # inside an option -> select option based on in-option policy
-            values = self.get_option_values(self.option_stack[-1], old_state)
-        option = self.select_option(values)
-        if option[0] == 0:  # level == 0 means we selected a basic action -> return it right away
-            return option
-        else:  # level > 0 means we selected a higher-level option -> use its policy for option selection
-            return self.take_action(old_state)
+        values = self.v.get_option_values(old_state, self.option_stack, self.theta)  # self.__get_option_values(old_state)
+        option = self.__select_option(values)
+        self.option_stack.append(option)
+        if self.__is_basic(option):
+            return option  # execute option
+        else:
+            return self.take_action(old_state)  # use option policy to select next option(s)
 
-    def get_option_values(self, option, state):
-        features = 1 - state[option[0]-1]  # features indicate which lights are OFF
-        theta = self.o_theta[self.option_coord_to_index(option), :, :]
-        option_values = np.dot(theta, features)  # calculate values from thetas
-        values = np.full([self.n_levels, self.n_lights], np.nan)  # initialize value array
-        values[option[0]-1, :] = option_values
-        return values
-
-    def select_option(self, values):
-        if np.random.rand() > self.epsilon:
+    def __select_option(self, values):
+        if self.__is_greedy():
             selected_options = np.argwhere(values == np.nanmax(values))  # all options with the highest value
         else:
             selected_options = np.argwhere(~ np.isnan(values))  # all options that are not nan
-        select = np.random.choice(range(len(selected_options)))  # randomly select the index of one of the options
+        select = np.random.randint(len(selected_options))  # randomly select the index of one of the options
         option = selected_options[select]  # pick that option
-        self.option_stack.append(option)  # put this option on top of the option stack
         self.history.append(option)  # for data analysis / debugging
         return option
 
-    def learn(self, old_state, events, new_state):
-        current_events = np.argwhere(events)
-        self.learn_from_events(old_state, current_events, new_state)  # count events, create options, update thetas
-        self.update_options(old_state, current_events, new_state, [])  # update v of term. options, theta of non-term.
+    def __is_greedy(self):
+        return np.random.rand() > self.epsilon
 
-    def learn_from_events(self, old_state, current_events, new_state):
+    @staticmethod
+    def __is_basic(option):
+        return option[0] == 0
+
+    def __is_novel(self, event):
+        return self.n[event[0], event[1]] == 1
+
+    def learn(self, old_state, events):
+        current_events = np.argwhere(events)
+        self.__learn_from_events(old_state, current_events)  # count events, initialize new options (v & theta)
+        self.__learn_rest(old_state, current_events, [])  # update theta of ongoing options, v of terminated
+
+    def __learn_from_events(self, old_state, current_events):
         previous_option = []
         for event in current_events:
             self.n[event[0], event[1]] += 1  # update event count (novelty decreases)
-            if np.any(np.isnan(self.v[event[0], event[1]])):  # if option has not yet been discovered
-                self.v[event[0], event[1]] = self.initial_value  # create option
-                self.update_v(event, 1)  # update option value right away
-            if event[0] > 0:  # if it's a higher-level event
-                self.update_theta(event, 1, old_state, new_state, previous_option)  # update in-option policy
-            previous_option = event.copy()  # it's not cheating...
+            if self.__is_novel(event):
+                self.v.create_option(event)
+                self.v.update(self.n, self.alpha, event, 1)  # update option value right away
+            if not self.__is_basic(event):  # it's a higher-level event
+                self.theta.update(event, 1, old_state, previous_option, self.alpha)  # update in-option policy
+            previous_option = event.copy()
 
-    def update_options(self, old_state, events, new_state, previous_option):
+    def __learn_rest(self, old_state, events, previous_option):
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
-            [goal_achieved, distracted] = self.check_if_goal_achieved_distracted(current_option, events)
-            if current_option[0] > 0 and not goal_achieved:  # higher-level options update in-option policy each trial
-                self.update_theta(current_option, 0, old_state, new_state, previous_option)
-            if goal_achieved or distracted:  # current_option terminated -> update v
+            [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, events)
+            if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
+                self.theta.update(current_option, 0, old_state, previous_option, self.alpha)
+            if goal_achieved or distracted:  # if current_option terminated
+                self.v.update(self.n, self.alpha, current_option, 1)
                 previous_option = self.option_stack.pop()
-                self.update_v(current_option, goal_achieved)  # update values of options after termination
-            else:  # current_option has not terminated -> repetition would lead to infinite loop
-                break
+            else:  # if current_option has not terminated, no higher-level option can have terminated
+                break  # no more updating needed
 
-    def update_v(self, option, goal_achieved):
-        novelty = 1 / self.n[option[0], option[1]]
-        RPE = goal_achieved * novelty - self.v[option[0], option[1]]
-        self.v[option[0], option[1]] += self.alpha * RPE
-
-    def update_theta(self, current_option, goal_achieved, old_state, new_state, previous_option):
-        theta_previous_option = self.o_theta[self.option_coord_to_index(current_option), previous_option[1], :]
-        features = 1 - old_state[current_option[0]-1]
-        value_previous_option = np.dot(theta_previous_option, features)
-        value_next_option = 0  # TD!!! self.get_maxQ(current_option, new_state)
-        RPE = goal_achieved + self.gamma * value_next_option - value_previous_option
-        theta_previous_option += self.alpha * RPE / sum(features) * features
-
-    def check_if_goal_achieved_distracted(self, option, events):
-        goal_achieved = any([np.all(option == event) for event in events])  # did event occur that option targets?
+    def __get_goal_achieved_distracted(self, option, events):
+        goal_achieved = any([np.all(option == event) for event in events])  # did option's target event occur?
         distracted = self.distraction > np.random.rand()
         return [goal_achieved, distracted]
-
-    def option_coord_to_index(self, coord):
-        level, selected_a = coord
-        if level == 0:
-            n_options_below = - self.n_lights
-        else:
-            n_tuples_level = self.n_lights // self.n_lights_tuple ** level
-            n_options_below = np.sum([n_tuples_level * self.n_lights_tuple ** i for i in range(1, level)])
-        index = n_options_below + selected_a
-        return int(index)
-
-    # def get_maxQ(self, current_option, new_state):
-    #     values = self.get_option_values(current_option, new_state)  # get in-option values of current option
-    #     maxQ = np.nanmax(values)
-    #     return maxQ
 
 
 class OptionAgent(HierarchicalAgent):

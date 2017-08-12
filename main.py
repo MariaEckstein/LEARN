@@ -23,24 +23,29 @@ n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (former
 lights_on = np.zeros([n_trials, n_agents])
 for ag in range(n_agents):
     # print("\n AGENT", ag)
-    # agent = NoveltyAgentF(alpha, epsilon, n_levels, n_lights, n_lights_tuple)
-    agent = NoveltyAgentH(alpha, epsilon, gamma, distraction,
-                          n_levels, n_lights, n_lights_tuple, "verbose")
     env = Environment(n_levels, n_lights, n_lights_tuple)
+    # agent = NoveltyAgentF(alpha, epsilon, env)
+    agent = NoveltyAgentH(alpha, epsilon, gamma, distraction, env)
     for trial in range(n_trials):
-        print("\n TRIAL", trial)
-        print("Option stack:", agent.option_stack)
         old_state = env.state.copy()
-        print("Old state:\n", old_state)
         action = agent.take_action(old_state)
         env.switch_lights(action)
         events = env.make_events(action)
-        print("Events:\n", np.argwhere(events))
         new_state = env.state.copy()
         agent.learn(old_state, events, new_state)
-        if np.all(old_state[0]):
-            print("Won! Final state:", env.state)
-            break
+
+import matplotlib.pyplot as plt
+
+plt.ion()
+plt.figure()
+plt.gca()
+C = plt.Circle((0, 0), .2, color='w')
+C.set_color('r')
+ax = plt.gca()
+ax.add_artist(C)
+plt.xlim(-.5,.5)
+plt.ylim(-.5,.5)
+ax.set_aspect(1)
 
 # lights_on_NF = lights_on
 # v_turn_on_NF = v_on

@@ -1,0 +1,53 @@
+---
+title: "LEARN"
+author: "Maria Eckstein"
+date: "September 23, 2017"
+output: pdf_document
+---
+
+```{r Set parameters, load packages, etc.}
+library("ggplot2"); library("plyr")
+theme_set(theme_bw())
+
+data_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
+```
+```{r Read in data}
+# Value history
+v_history = read.csv(file = file.path(data_dir, "v_history.csv"), header = T, na.strings = c("", "NA", "-1"))
+v_history$X = NULL
+head(v_history)
+summary(v_history)
+v_history_long = melt(v_history, id.vars = c("level", "trial"), variable_name = "action")
+
+# Theta history
+# In order to add add feature values, I need to know which features were currently on -> separate data frame?
+theta_history = read.csv(file = file.path(data_dir, "theta_history.csv"), header = T, na.strings = c("", "NA", "-1"))
+theta_history$X = NULL
+head(theta_history)
+summary(theta_history)
+theta_history_long = melt(theta_history, id.vars = c("option", "feature", "trial"), variable_name = "action")
+head(theta_history_long)
+summary(theta_history_long)
+```
+```{r Plot novelty values over time}
+ggplot(v_history_long, aes(trial, value, color = action, group = level)) +
+  geom_point() +  # position = "jitter"
+  geom_line(aes(group = action)) +  # position = "jitter", 
+  coord_cartesian(xlim = c(0, 50)) +
+  # stat_summary(fun.data = "mean_se", geom = "pointrange") +
+  facet_grid(~ level)
+```
+```{r Plot option features over time}
+ggplot(theta_history_long, aes(trial, value, color = action)) +  # subset(theta_history_long, option %in% c(0, 1))
+  geom_point() +
+  facet_grid(option ~ feature)
+# Explanation of the graph:
+# - rows = options; columns = features
+# - e.g, option 0: the agent learns that features 2-7 are not important, but features 0 and 1 are really important
+# - in feature 0, selecting action 0 
+```
+```{r Plot option values over time}
+
+ggplot()
+
+```

@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r Set parameters, load packages, etc.}
-library("ggplot2"); library("plyr")
+library("ggplot2"); library("plyr"); library("reshape")
 theme_set(theme_bw())
 
 data_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
@@ -17,28 +17,47 @@ v_history = read.csv(file = file.path(data_dir, "v_history.csv"), header = T, na
 v_history$X = NULL
 head(v_history)
 summary(v_history)
-v_history_long = melt(v_history, id.vars = c("level", "trial"), variable_name = "action")
+v_history_long = melt(v_history, measure.vars = paste("action", 0:(v_history$n_lights[1]-1), sep = ""), variable_name = "action")
+actions = sapply(strsplit(as.character(v_history_long$action), "action"), "[[", 2)
+v_history_long$action = as.numeric(as.character(actions))
+head(v_history_long)
+summary(v_history_long)
 
 # Theta history
 # In order to add add feature values, I need to know which features were currently on -> separate data frame?
 theta_history = read.csv(file = file.path(data_dir, "theta_history.csv"), header = T, na.strings = c("", "NA", "-1"))
 theta_history$X = NULL
+theta_history = subset(theta_history, action0 != 0)
 head(theta_history)
 summary(theta_history)
-theta_history_long = melt(theta_history, id.vars = c("option", "feature", "trial"), variable_name = "action")
+theta_history_long = melt(theta_history, measure.vars = paste("action", 0:(theta_history$n_lights[1]-1), sep = ""), variable_name = "action")
+actions = sapply(strsplit(as.character(theta_history_long$action), "action"), "[[", 2)
+theta_history_long$action = as.numeric(as.character(actions))
 head(theta_history_long)
 summary(theta_history_long)
+
+# Event history
+event_hist = read.csv(file = file.path(data_dir, "event_history_long.csv"), header = T)
+event_hist$X = NULL
+colnames(event_hist)[colnames(event_hist) == "variable"] = c("action")
+
+ggplot(event_hist, aes(action, level)) +
+  geom_tile(aes(fill = value), colour = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  facet_wrap(~ trial)
+
+# 
 ```
 ```{r Plot novelty values over time}
-ggplot(v_history_long, aes(trial, value, color = action, group = level)) +
+ggplot(v_history_long, aes(trial, value, color = factor(action), group = level)) +
   geom_point() +  # position = "jitter"
   geom_line(aes(group = action)) +  # position = "jitter", 
-  coord_cartesian(xlim = c(0, 50)) +
+  # coord_cartesian(xlim = c(0, 50)) +
   # stat_summary(fun.data = "mean_se", geom = "pointrange") +
   facet_grid(~ level)
 ```
 ```{r Plot option features over time}
-ggplot(theta_history_long, aes(trial, value, color = action)) +  # subset(theta_history_long, option %in% c(0, 1))
+ggplot(subset(theta_history_long, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +  # subset(theta_history_long, option %in% c(0, 1))
   geom_point() +
   facet_grid(option ~ feature)
 # Explanation of the graph:
@@ -48,6 +67,23 @@ ggplot(theta_history_long, aes(trial, value, color = action)) +  # subset(theta_
 ```
 ```{r Plot option values over time}
 
-ggplot()
+th0 = subset(theta_history_long, option == 0 & feature %in% 0:3 & action %in% 0:3)
+
+ggplot(th0, aes(trial, value, color = factor(action))) +
+  geom_point(position = "jitter", alpha = .3) +
+  facet_grid(~ feature)
+
+th0 = subset(theta_history_long, option == 0 & feature %in% 0:9 & action %in% 0:9)
+
+ggplot(th0, aes(trial, value, color = factor(feature))) +
+  geom_point(position = "jitter", alpha = .3) +
+  facet_grid(~ action)
+
+tiles_opt = expand.grid(feature = 0:max(theta_history_long$feature), option = 0:max(theta_history_long$option), action = max(theta_history_long$action))
+tiles = subset(theta_history_long, trial == max(th0$trial) & option %in% 0:2 & action %in% 0:8)
+ggplot(tiles, aes(feature, factor(action))) +
+  geom_tile(aes(fill = value), colour = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  facet_grid(~ option)
 
 ```

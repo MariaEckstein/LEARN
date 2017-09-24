@@ -6,7 +6,7 @@ class V(object):
         self.initial_value = 1 / env.n_lights_tuple / 2
         self.v = self.initial_value * np.ones([env.n_levels, env.n_lights])  # values of actions and options
         self.v[1:] = np.nan  # undefined for options
-        self.history = np.zeros([env.n_levels, env.n_lights, env.n_trials])
+        self.history = np.zeros([env.n_trials, env.n_levels, env.n_lights])
 
     def create_option(self, option):
         self.v[option[0], option[1]] = self.initial_value

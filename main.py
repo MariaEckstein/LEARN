@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import pandas as pd
+from ggplot import *
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -14,13 +15,10 @@ n_lights_tuple = 2  # number of lights per level-0 tuple
 n_agents = 1
 alpha = 0.7  # agent's learning rate
 epsilon = 0.2  # inverse of agent's greediness
-# gamma = 0.9
-distraction = 0.2  # probability option terminates at each step
-n_trials = 500  # number of trials in the game
+distraction = 0  # probability option terminates at each step
+n_trials = 20  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
-# Code for flat agents
-lights_on = np.zeros([n_trials, n_agents])
 for ag in range(n_agents):
     # print("\n AGENT", ag)
     env = Environment(n_levels, n_lights, n_lights_tuple, n_trials)
@@ -28,36 +26,74 @@ for ag in range(n_agents):
     agent = NoveltyAgentH(alpha, epsilon, distraction, env)
     for trial in range(n_trials):
         old_state = env.state.copy()
+        env.state_history[env.row, :, :] = old_state
         action = agent.take_action(old_state)
+        agent.action_history[trial, action[1]] = 1
         env.switch_lights(action)
         events = env.make_events(action)
+        env.event_history[env.row, :, :] = events
         new_state = env.state.copy()
         agent.learn(old_state, events)
         agent.trial += 1
+        env.row += 1
+
+# Save event history to csv
+colnames = [str(i) for i in range(n_lights)]
+event_history = pd.DataFrame(columns=colnames)
+for trial in range(env.event_history.shape[0]):
+    level_event_history = pd.DataFrame(env.event_history[trial, :, :], columns=colnames)
+    level_event_history['trial'] = trial
+    level_event_history['level'] = range(n_levels)
+    event_history = pd.concat([event_history, level_event_history])
+event_history_long = pd.melt(event_history, id_vars=["trial", "level"])
+event_history_long['variable'] = pd.to_numeric(event_history_long['variable'])
+event_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/event_history_long.csv")
+
+# #.loc[event_history_long['trial'] == 0]
+# ggplot(event_history_long, aes('variable', 'level')) +\
+#     geom_tile(aes(fill='value'))  # , color='white'
+#     # geom_point() +\
+
+# ggplot(event_history_long, aes('trial', 'value')) +\
+#     geom_point()
+#     geom_tile(aes(fill='value'), color='white')
 
 # Save value history to csv
 trials = np.arange(n_trials)
-colnames = ['action' + str(i) for i in range(n_lights)]
+colnames = [str(i) for i in range(n_lights)]
 v_history = pd.DataFrame(columns=colnames)
-for level in range(agent.v.history.shape[0]):
-    level_v_history = pd.DataFrame(agent.v.history[level, :, :].transpose(), columns=colnames)
-    level_v_history['level'] = level
-    level_v_history['trial'] = trials
+for trial in range(agent.v.history.shape[0]):
+    level_v_history = pd.DataFrame(agent.v.history[trial, :, :], columns=colnames)
+    level_v_history['trial'] = trial
     v_history = pd.concat([v_history, level_v_history])
-v_history.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/v_history.csv") # "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
+v_history['n_lights'] = n_lights
+v_history['n_lights_tuple'] = n_lights_tuple
+v_history['alpha'] = alpha
+v_history['epsilon'] = epsilon
+v_history['distraction'] = distraction
+v_history.head()
+v_history_long = pd.melt(v_history, id_vars=["trial", "n_lights", "n_lights_tuple", "alpha", "epsilon", "distraction"])
+v_history_long['variable'] = pd.to_numeric(v_history_long['variable'])
+ident = ""  # "_n_lights" + str(n_lights) + "_n_lights_tuple" + str(n_lights_tuple) + "_alpha" + str(alpha)
+v_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/v_history_long" + ident + ".csv")
 
-# Save theta history to csv
-colnames = ['action' + str(i) for i in range(n_lights)]
-theta_history = pd.DataFrame(columns=colnames)
-for option in range(agent.theta.history.shape[0]):
-    for feature in range(agent.theta.history.shape[1]):
-        option_theta_history = pd.DataFrame(agent.theta.history[option, feature, :, :].transpose(), columns=colnames)
-        option_theta_history['option'] = option
-        option_theta_history['feature'] = feature
-        option_theta_history['trial'] = range(option_theta_history.shape[0])
-        theta_history = pd.concat([theta_history, option_theta_history])
-theta_history.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/theta_history.csv") # "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
-
+# # Save theta history to csv
+# colnames = ['action' + str(i) for i in range(n_lights)]
+# theta_history = pd.DataFrame(columns=colnames)
+# for option in range(agent.theta.history.shape[0]):
+#     for feature in range(agent.theta.history.shape[1]):
+#         option_theta_history = pd.DataFrame(agent.theta.history[option, feature, :, :].transpose(), columns=colnames)
+#         option_theta_history['option'] = option
+#         option_theta_history['feature'] = feature
+#         option_theta_history['trial'] = range(option_theta_history.shape[0])
+#         theta_history = pd.concat([theta_history, option_theta_history])
+# theta_history['n_lights'] = n_lights
+# theta_history['n_lights_tuple'] = n_lights_tuple
+# theta_history['alpha'] = alpha
+# theta_history['epsilon'] = epsilon
+# theta_history['distraction'] = distraction
+# theta_history.head()
+# theta_history.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/theta_history.csv")
 
 
 # rownames = ['trial' + str(i) for i in range(n_trials)]

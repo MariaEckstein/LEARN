@@ -37,10 +37,12 @@ class HierarchicalAgent(object):
 
         # Agent's plans and memory about his past actions
         self.option_stack = []  # stack of the option(s) that are currently guiding behavior
-        self.history = []  # for analysis / debugging
+        self.option_history = np.zeros([env.n_trials * env.n_levels, self.theta.n_options, env.n_lights])
+        self.option_row = 0
+        self.action_history = np.zeros([env.n_trials, env.n_lights])
 
     def take_action(self, old_state):
-        self.v.history[:, :, self.trial] = self.v.get()
+        self.v.history[self.trial, :, :] = self.v.get()
         values = self.v.get_option_values(old_state, self.option_stack, self.theta)  # self.__get_option_values(old_state)
         option = self.__select_option(values)
         self.option_stack.append(option)
@@ -56,7 +58,8 @@ class HierarchicalAgent(object):
             selected_options = np.argwhere(~ np.isnan(values))  # all options that are not nan
         select = np.random.randint(len(selected_options))  # randomly select the index of one of the options
         option = selected_options[select]  # pick that option
-        self.history.append(option)  # for data analysis / debugging
+        self.option_history[self.option_row, option[0], option[1]] = 1  # for data analysis / debugging
+        self.option_row += 1
         return option
 
     def __is_greedy(self):
@@ -82,14 +85,14 @@ class HierarchicalAgent(object):
                 self.v.create_option(event)
                 self.v.update(self, event, 1)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
-                self.theta.update(event, 1, old_state, previous_option, self)  # update in-option policy
+                self.theta.update(event, 1, old_state, previous_option, self.alpha)  # update in-option policy
             previous_option = event.copy()
 
     def __learn_rest(self, old_state, events, previous_option):
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
             [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
-                self.theta.update(current_option, 0, old_state, previous_option, self)
+                self.theta.update(current_option, 0, old_state, previous_option, self.alpha)
             if goal_achieved or distracted:  # if current_option terminated
                 self.v.update(self, current_option, 1)
                 previous_option = self.option_stack.pop()

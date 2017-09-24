@@ -15,6 +15,10 @@ class Theta(object):
                 n_lights_level = env.n_lights // env.n_lights_tuple ** level  # number of lights at level below option
                 self.theta[row_ot, range(n_lights_level), :] = initial_theta
                 row_ot += 1
+        theta_shape = list(self.theta.shape)
+        theta_shape.append(env.n_levels * env.n_trials)
+        self.history = np.zeros(theta_shape)
+        self.h_row = 0
 
     def get_option_thetas(self, option, index=None):
         if index is None:
@@ -22,12 +26,14 @@ class Theta(object):
         else:
             return self.theta[self.option_coord_to_index(option), index, :]
 
-    def update(self, current_option, goal_achieved, old_state, previous_option, alpha):
+    def update(self, current_option, goal_achieved, old_state, previous_option, agent):
+        self.history[:, :, :, self.h_row] = self.get()
+        self.h_row += 1
         theta_previous_option = self.get_option_thetas(current_option, previous_option[1])
         features = 1 - old_state[current_option[0]-1]
         value_previous_option = np.dot(theta_previous_option, features)
         RPE = goal_achieved - value_previous_option
-        theta_previous_option += alpha * RPE / sum(features) * features
+        theta_previous_option += agent.alpha * RPE / sum(features) * features
 
     @staticmethod
     def __get_coord_function(env):

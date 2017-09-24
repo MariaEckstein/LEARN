@@ -6,14 +6,15 @@ class V(object):
         self.initial_value = 1 / env.n_lights_tuple / 2
         self.v = self.initial_value * np.ones([env.n_levels, env.n_lights])  # values of actions and options
         self.v[1:] = np.nan  # undefined for options
+        self.history = np.zeros([env.n_levels, env.n_lights, env.n_trials])
 
     def create_option(self, option):
         self.v[option[0], option[1]] = self.initial_value
 
-    def update(self, n, alpha, option, goal_achieved):
-        novelty = 1 / n[option[0], option[1]]
+    def update(self, agent, option, goal_achieved):
+        novelty = 1 / agent.n[option[0], option[1]]
         RPE = goal_achieved * novelty - self.v[option[0], option[1]]
-        self.v[option[0], option[1]] += alpha * RPE
+        self.v[option[0], option[1]] += agent.alpha * RPE
 
     def get_option_values(self, state, option_stack, theta):
         inside_option = len(option_stack) > 0

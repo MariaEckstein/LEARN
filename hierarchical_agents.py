@@ -2,32 +2,10 @@ import numpy as np
 from theta import Theta
 from v import V
 
-# Update:
-# - took out OFF action
-# - options are working
-# - did features instead of states
-
-# Curiosity & Hierarchy / structure: How do we learn to understand the world? -> We stop seeing basic actions and start
-# seeing options. We associate elements of the world into bigger and bigger chunks. We understand the world in terms
-# of what we can do with it. A baby does not see the computer screen, mouse, and key board, but black and shiny boxes
-# of different sizes. Humans explore the world in a smart way, trying to understand it, trying to reduce unexpected
-# novelty by seeking previously novel events, learning their underlying mechanisms. This is a very general
-# description of human learning and exploration that applies to many situations: motor learning, language learning,
-# concept learning. Previous research has shown that humans infer hierarhcical structure (Collins,
-# Botvinick, Badre, Frank) and love novelty (Gershman & Niv, 2015).
-
-# Conferences: cognitive science conference / artificial general intelligence; cognitive systems
-
-# Content:
-# don't compare algo to people directly, make the point that it's the same kind that drives both
-# my algo should show a systematic search through the space, do people do a similar thing?
-# compare to an agent that is not driven by novelty -> by what else could it be driven? "reward", i.e., difference in the number of lights?
-# compare to an agent without options -> gets bored, has unstructured behavior
-# trajectory over time -> behavior is unstructured at first, becomes more and more structured
-# compare worlds of different sizes, different numbers of levels, plot learning (difference between current and optimal values) over time in each
-# play with different numbers of levels -> how many levels do humans have?
 
 # TDs:
+# - options of different forms (different numbers of actions, overlapping)
+# - decide whether lights will stay on (problem humans can use turning-off lights as cues as to which lights belong together in an option) or turn off (problem: model has infinite memory, people not)
 # - find a better way to select actions, not going from left to right
 # - make sure everything is working
 # - what is the agent's goal? Just unstructured exploration? Figure it out? Turn on many lights? Try to find new colors?
@@ -38,7 +16,6 @@ from v import V
 #   once they see the event occur / the sub-goal reached
 # - add eligibility traces -> backward view -> people recall multiple actions they took before an event
 # - humans know that each light belongs to only one group -> reduce values of lights with high values in another group?
-
 
 class HierarchicalAgent(object):
     """
@@ -54,6 +31,7 @@ class HierarchicalAgent(object):
 
         # Agent's thoughts about its environment (novelty, values, theta)
         self.n = np.zeros([env.n_levels, env.n_lights])  # event counter = inverse novelty
+        self.trial = 0  # current trial
         self.v = V(env)
         self.theta = Theta(env)
 
@@ -62,6 +40,7 @@ class HierarchicalAgent(object):
         self.history = []  # for analysis / debugging
 
     def take_action(self, old_state):
+        self.v.history[:, :, self.trial] = self.v.get()
         values = self.v.get_option_values(old_state, self.option_stack, self.theta)  # self.__get_option_values(old_state)
         option = self.__select_option(values)
         self.option_stack.append(option)
@@ -101,18 +80,18 @@ class HierarchicalAgent(object):
             self.n[event[0], event[1]] += 1  # update event count (novelty decreases)
             if self.__is_novel(event):
                 self.v.create_option(event)
-                self.v.update(self.n, self.alpha, event, 1)  # update option value right away
+                self.v.update(self, event, 1)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
-                self.theta.update(event, 1, old_state, previous_option, self.alpha)  # update in-option policy
+                self.theta.update(event, 1, old_state, previous_option, self)  # update in-option policy
             previous_option = event.copy()
 
     def __learn_rest(self, old_state, events, previous_option):
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
             [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
-                self.theta.update(current_option, 0, old_state, previous_option, self.alpha)
+                self.theta.update(current_option, 0, old_state, previous_option, self)
             if goal_achieved or distracted:  # if current_option terminated
-                self.v.update(self.n, self.alpha, current_option, 1)
+                self.v.update(self, current_option, 1)
                 previous_option = self.option_stack.pop()
             else:  # if current_option has not terminated, no higher-level option can have terminated
                 break  # no more updating needed

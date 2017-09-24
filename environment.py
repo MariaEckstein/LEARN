@@ -2,7 +2,8 @@ import numpy as np
 
 
 class Environment(object):
-    def __init__(self, n_levels, n_lights, n_lights_tuple):
+    def __init__(self, n_levels, n_lights, n_lights_tuple, n_trials):
+        self.n_trials = n_trials
         self.n_levels = n_levels
         self.n_lights = n_lights
         self.n_lights_tuple = n_lights_tuple

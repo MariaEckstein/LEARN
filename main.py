@@ -16,14 +16,14 @@ alpha = 0.7  # agent's learning rate
 epsilon = 0.2  # inverse of agent's greediness
 # gamma = 0.9
 distraction = 0.2  # probability option terminates at each step
-n_trials = 50  # number of trials in the game
+n_trials = 500  # number of trials in the game
 n_levels = math.ceil(n_lights ** (1/n_lights_tuple))  # number of levels (formerly lights of different colors)
 
 # Code for flat agents
 lights_on = np.zeros([n_trials, n_agents])
 for ag in range(n_agents):
     # print("\n AGENT", ag)
-    env = Environment(n_levels, n_lights, n_lights_tuple)
+    env = Environment(n_levels, n_lights, n_lights_tuple, n_trials)
     # agent = NoveltyAgentF(alpha, epsilon, env)
     agent = NoveltyAgentH(alpha, epsilon, distraction, env)
     for trial in range(n_trials):
@@ -33,19 +33,53 @@ for ag in range(n_agents):
         events = env.make_events(action)
         new_state = env.state.copy()
         agent.learn(old_state, events)
+        agent.trial += 1
 
-import matplotlib.pyplot as plt
+# Save value history to csv
+trials = np.arange(n_trials)
+colnames = ['action' + str(i) for i in range(n_lights)]
+v_history = pd.DataFrame(columns=colnames)
+for level in range(agent.v.history.shape[0]):
+    level_v_history = pd.DataFrame(agent.v.history[level, :, :].transpose(), columns=colnames)
+    level_v_history['level'] = level
+    level_v_history['trial'] = trials
+    v_history = pd.concat([v_history, level_v_history])
+v_history.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/v_history.csv") # "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
 
-plt.ion()
-plt.figure()
-plt.gca()
-C = plt.Circle((0, 0), .2, color='w')
-C.set_color('r')
-ax = plt.gca()
-ax.add_artist(C)
-plt.xlim(-.5,.5)
-plt.ylim(-.5,.5)
-ax.set_aspect(1)
+# Save theta history to csv
+colnames = ['action' + str(i) for i in range(n_lights)]
+theta_history = pd.DataFrame(columns=colnames)
+for option in range(agent.theta.history.shape[0]):
+    for feature in range(agent.theta.history.shape[1]):
+        option_theta_history = pd.DataFrame(agent.theta.history[option, feature, :, :].transpose(), columns=colnames)
+        option_theta_history['option'] = option
+        option_theta_history['feature'] = feature
+        option_theta_history['trial'] = range(option_theta_history.shape[0])
+        theta_history = pd.concat([theta_history, option_theta_history])
+theta_history.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/theta_history.csv") # "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
+
+
+
+# rownames = ['trial' + str(i) for i in range(n_trials)]
+# trials = np.arange(n_trials)
+# ax = sns.regplot(x=trials, y="light2", data=v_history, fit_reg=False)
+# v_history['trial'] = trials
+# v_history_long = pd.melt(v_history, id_vars="trial")
+# gr = sns.FacetGrid(v_history_long, hue="variable")
+# gr.map(plt.scatter, "trial", "value")
+# # gr.map(sns.regplot, "trial", "value")
+# gr.add_legend()
+
+# plt.ion()
+# plt.figure()
+# plt.gca()
+# C = plt.Circle((0, 0), .2, color='w')
+# C.set_color('r')
+# ax = plt.gca()
+# ax.add_artist(C)
+# plt.xlim(-.5,.5)
+# plt.ylim(-.5,.5)
+# ax.set_aspect(1)
 
 # lights_on_NF = lights_on
 # v_turn_on_NF = v_on

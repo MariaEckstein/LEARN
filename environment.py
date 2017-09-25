@@ -11,7 +11,7 @@ class Environment(object):
         self.events = np.zeros([self.n_levels, self.n_lights], dtype=bool)
         self.state_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
         self.event_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
-        self.row = 0
+        # self.row = 0
 
     def switch_lights(self, action):
         self.state[action[0], action[1]] = 1

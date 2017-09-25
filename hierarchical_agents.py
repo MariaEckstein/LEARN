@@ -37,7 +37,7 @@ class HierarchicalAgent(object):
 
         # Agent's plans and memory about his past actions
         self.option_stack = []  # stack of the option(s) that are currently guiding behavior
-        self.option_history = np.zeros([env.n_trials * env.n_levels, self.theta.n_options, env.n_lights])
+        self.option_history = np.zeros([env.n_trials * env.n_levels, env.n_levels, env.n_lights + 2])
         self.option_row = 0
         self.action_history = np.zeros([env.n_trials, env.n_lights])
 
@@ -58,8 +58,6 @@ class HierarchicalAgent(object):
             selected_options = np.argwhere(~ np.isnan(values))  # all options that are not nan
         select = np.random.randint(len(selected_options))  # randomly select the index of one of the options
         option = selected_options[select]  # pick that option
-        self.option_history[self.option_row, option[0], option[1]] = 1  # for data analysis / debugging
-        self.option_row += 1
         return option
 
     def __is_greedy(self):
@@ -73,6 +71,8 @@ class HierarchicalAgent(object):
         return self.n[event[0], event[1]] == 1
 
     def learn(self, old_state, events):
+        self.__update_theta_history(self.trial)
+        self.__update_option_history()
         current_events = np.argwhere(events)
         self.__learn_from_events(old_state, current_events)  # count events, initialize new options (v & theta)
         self.__learn_rest(old_state, current_events, [])  # update theta of ongoing options, v of terminated
@@ -85,14 +85,28 @@ class HierarchicalAgent(object):
                 self.v.create_option(event)
                 self.v.update(self, event, 1)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
-                self.theta.update(event, 1, old_state, previous_option, self.alpha)  # update in-option policy
+                self.theta.update(event, 1, old_state, previous_option, self)  # update in-option policy
             previous_option = event.copy()
+
+    def __update_theta_history(self, trial):
+        self.theta.history[self.theta.h_row, :, :, :self.theta.n_lights] = self.theta.get()
+        self.theta.history[self.theta.h_row, :, :, -1] = trial
+        self.theta.h_row += 1
+
+    def __update_option_history(self):
+        self.step = 0
+        for current_option in self.option_stack:  # list all current options
+            self.option_history[self.option_row, current_option[0], current_option[1]] = 1
+            self.option_history[self.option_row, :, -2] = self.trial
+            self.option_history[self.option_row, :, -1] = self.step
+            self.step += 1
+            self.option_row += 1
 
     def __learn_rest(self, old_state, events, previous_option):
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
             [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
-                self.theta.update(current_option, 0, old_state, previous_option, self.alpha)
+                self.theta.update(current_option, 0, old_state, previous_option, self)
             if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
                 if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events
                     self.v.update(self, current_option, 1)

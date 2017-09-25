@@ -6,50 +6,63 @@ output: pdf_document
 ---
 
 ```{r Set parameters, load packages, etc.}
-library("ggplot2"); library("plyr"); library("reshape")
+library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
 theme_set(theme_bw())
-
 data_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
+plot_dir = file.path(data_dir, "plots")
+if (!dir.exists(plot_dir)) {
+  dir.create(plot_dir)
+}
 ```
 ```{r Read in data}
-# Value history
-v_history = read.csv(file = file.path(data_dir, "v_history.csv"), header = T, na.strings = c("", "NA", "-1"))
-v_history$X = NULL
-head(v_history)
-summary(v_history)
-v_history_long = melt(v_history, measure.vars = paste("action", 0:(v_history$n_lights[1]-1), sep = ""), variable_name = "action")
-actions = sapply(strsplit(as.character(v_history_long$action), "action"), "[[", 2)
-v_history_long$action = as.numeric(as.character(actions))
-head(v_history_long)
-summary(v_history_long)
-
-# Theta history
-# In order to add add feature values, I need to know which features were currently on -> separate data frame?
-theta_history = read.csv(file = file.path(data_dir, "theta_history.csv"), header = T, na.strings = c("", "NA", "-1"))
-theta_history$X = NULL
-theta_history = subset(theta_history, action0 != 0)
-head(theta_history)
-summary(theta_history)
-theta_history_long = melt(theta_history, measure.vars = paste("action", 0:(theta_history$n_lights[1]-1), sep = ""), variable_name = "action")
-actions = sapply(strsplit(as.character(theta_history_long$action), "action"), "[[", 2)
-theta_history_long$action = as.numeric(as.character(actions))
-head(theta_history_long)
-summary(theta_history_long)
-
 # Event history
 event_hist = read.csv(file = file.path(data_dir, "event_history_long.csv"), header = T)
 event_hist$X = NULL
-colnames(event_hist)[colnames(event_hist) == "variable"] = c("action")
+head(event_hist)
 
-ggplot(event_hist, aes(action, level)) +
+# Value history
+v_history = read.csv(file = file.path(data_dir, "v_history_long.csv"), header = T)
+v_history$X = NULL
+head(v_history)
+
+# Theta history
+theta_history = read.csv(file = file.path(data_dir, "theta_history_long.csv"), header = T, na.strings = c("", "NA", "-1"))
+theta_history$X = NULL
+theta_history = subset(theta_history, value != 0)
+head(theta_history)
+```
+```{r Plot action, events, and values over time}
+# Events, trial by trial
+for (tr in 0:max(event_hist$trial)) {
+  gg_event = ggplot(subset(event_hist, trial == tr), aes(action, level)) +
+    geom_tile(aes(fill = value), color = "black") +
+    scale_fill_gradient(low = "white", high = "steelblue",
+                        breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1), limits = c(0, 1)) +  # necessary to make each plot based on the same color
+    theme(legend.position = "none") +
+    labs(x = "") +
+    facet_wrap(~ trial)
+  
+  gg_value = gg_event
+  gg_value$data = subset(v_history, trial == tr)
+  
+  grob_event_value = grid.arrange(gg_value, gg_event, ncol = 1)
+  
+  ggsave(file.path(plot_dir, paste("grob_event_value_", tr, ".png", sep = "")), grob_event_value,
+         width = max(event_hist$action)/2, height = 2*max(event_hist$level))
+}
+# Events, all trials
+ggplot(subset(event_hist, trial < 10 | trial > (max(trial) - 10)), aes(action, level)) +
   geom_tile(aes(fill = value), colour = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   facet_wrap(~ trial)
 
-# 
+ggplot(subset(v_history, trial < 10 | trial > (max(trial) - 10)), aes(action, level)) +
+  geom_tile(aes(fill = value), colour = "white") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  facet_wrap(~ trial)
 ```
 ```{r Plot novelty values over time}
-ggplot(v_history_long, aes(trial, value, color = factor(action), group = level)) +
+ggplot(v_history, aes(trial, value, color = factor(action), group = level)) +
   geom_point() +  # position = "jitter"
   geom_line(aes(group = action)) +  # position = "jitter", 
   # coord_cartesian(xlim = c(0, 50)) +

@@ -6,6 +6,8 @@ output: pdf_document
 ---
 
 ```{r Set parameters, load packages, etc.}
+data_set = "" #16   # can be 8 (8 basic actions, 3 levels), can be 16 (16 basic actions, 4 levels), or 27 (27 basic actions, 3 levels)
+
 library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
 theme_set(theme_bw())
 data_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
@@ -16,20 +18,49 @@ if (!dir.exists(plot_dir)) {
 ```
 ```{r Read in data}
 # Event history
-event_hist = read.csv(file = file.path(data_dir, "event_history_long.csv"), header = T)
+event_hist = read.csv(file = file.path(data_dir, paste("event_history_long", data_set, ".csv", sep = "")), header = T)
 event_hist$X = NULL
 head(event_hist)
+summary(event_hist)
 
 # Value history
-v_history = read.csv(file = file.path(data_dir, "v_history_long.csv"), header = T)
+v_history = read.csv(file = file.path(data_dir, paste("v_history_long", data_set, ".csv", sep = "")), header = T)
 v_history$X = NULL
 head(v_history)
+summary(v_history)
+
+# Option history
+option_history = read.csv(file = file.path(data_dir, paste("option_history_long", data_set, ".csv", sep = "")), header = T)
+option_history$X = NULL
+head(option_history)
+summary(option_history)
+
+for (tr in unique(option_history$trial)) {
+  plot(ggplot(subset(option_history, trial == tr), aes(action, level)) +
+    geom_tile(aes(fill = value), colour = "white") +
+    scale_fill_gradient(low = "white", high = "steelblue",
+                        breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1), limits = c(0, 1)) +  # necessary to make each plot based on the same color
+    labs(title = paste("trial", tr)) +
+    facet_wrap(~ step))
+}
 
 # Theta history
-theta_history = read.csv(file = file.path(data_dir, "theta_history_long.csv"), header = T, na.strings = c("", "NA", "-1"))
+theta_history = read.csv(file = file.path(data_dir, paste("theta_history_long", data_set, ".csv", sep = "")), header = T)
 theta_history$X = NULL
 theta_history = subset(theta_history, value != 0)
 head(theta_history)
+summary(theta_history)
+
+for (op in unique(theta_history$option)) {
+  for (tr in unique(theta_history$trial)) {
+    plot(ggplot(subset(theta_history, option == op & trial == tr), aes(action, feature)) +
+      geom_tile(aes(fill = value), colour = "white") +
+    scale_fill_gradient(low = "black", high = "white",
+                        breaks = c(0, 0.5, 1), labels = c(-1, 0, 1), limits = c(-1, 1)) +  # necessary to make each plot based on the same color
+      labs(title = paste("trial", tr)))
+  }
+}
+
 ```
 ```{r Plot action, events, and values over time}
 # Events, trial by trial
@@ -47,7 +78,7 @@ for (tr in 0:max(event_hist$trial)) {
   
   grob_event_value = grid.arrange(gg_value, gg_event, ncol = 1)
   
-  ggsave(file.path(plot_dir, paste("grob_event_value_", tr, ".png", sep = "")), grob_event_value,
+  ggsave(file.path(plot_dir, paste(data_set, "grob_event_value_", tr, ".png", sep = "")), grob_event_value,
          width = max(event_hist$action)/2, height = 2*max(event_hist$level))
 }
 # Events, all trials
@@ -62,14 +93,21 @@ ggplot(subset(v_history, trial < 10 | trial > (max(trial) - 10)), aes(action, le
   facet_wrap(~ trial)
 ```
 ```{r Plot novelty values over time}
-ggplot(v_history, aes(trial, value, color = factor(action), group = level)) +
-  geom_point() +  # position = "jitter"
-  geom_line(aes(group = action)) +  # position = "jitter", 
-  # coord_cartesian(xlim = c(0, 50)) +
-  # stat_summary(fun.data = "mean_se", geom = "pointrange") +
+gg_summary_novelty = ggplot(v_history, aes(trial, value, color = factor(action), group = level)) +
+  stat_summary(fun.data = "mean_se", geom = "pointrange") +
+  stat_summary(fun.y = "mean", geom = "line", color = "black") +
+  geom_line(aes(group = action)) +
+  coord_cartesian(y = c(0, 1)) +
+  theme(legend.position = "none") +
   facet_grid(~ level)
+ggsave(file.path(plot_dir, paste(data_set, "gg_summary_novelty.png", sep = "")), gg_summary_novelty, width = 6, height = 3)
 ```
 ```{r Plot option features over time}
+ggplot(subset(theta_history, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +  # subset(theta_history_long, option %in% c(0, 1))
+  geom_point() +
+  facet_grid(option ~ feature)
+
+
 ggplot(subset(theta_history_long, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +  # subset(theta_history_long, option %in% c(0, 1))
   geom_point() +
   facet_grid(option ~ feature)

@@ -93,8 +93,12 @@ class HierarchicalAgent(object):
             [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
                 self.theta.update(current_option, 0, old_state, previous_option, self.alpha)
-            if goal_achieved or distracted:  # if current_option terminated
-                self.v.update(self, current_option, 1)
+            if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
+                if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events
+                    self.v.update(self, current_option, 1)
+                previous_option = self.option_stack.pop()
+            elif distracted:  # goal not achieved -> event didn't happen -> update expected novelty toward 0
+                self.v.update(self, current_option, 0)
                 previous_option = self.option_stack.pop()
             else:  # if current_option has not terminated, no higher-level option can have terminated
                 break  # no more updating needed

@@ -1,3 +1,5 @@
+from hierarchical_agents import Agent
+from environment import Environment
 import math
 import numpy as np
 import pandas as pd
@@ -6,24 +8,22 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_style("whitegrid")
-from flat_agents import RewardAgent, NoveltyAgentF, NoveltyRewardAgent
-from hierarchical_agents import NoveltyAgentH
-from environment import Environment
 
-n_lights = 27   # number of level-0 lights (formerly know as "blue" lights); must be n_lights_tuple ** x
-n_lights_tuple = 3  # number of lights per level-0 tuple
+n_lights = 8   # number of level-0 lights (formerly know as "blue" lights); must be n_lights_tuple ** x
+n_lights_tuple = 2  # number of lights per level-0 tuple
 n_agents = 1
-alpha = 0.7  # agent's learning rate
-epsilon = 0.2  # inverse of agent's greediness
-distraction = 0  # probability option terminates at each step
-n_trials = 50  # number of trials in the game
+agent_stuff = {'alpha': 0.7, 'epsilon': 0.2, 'distraction': 0, 'hier_level': 100, 'learning_signal': 'novelty'}
+# alpha: agent's learning rate; epsilon: inverse of agent's greediness;
+# distraction: probability option terminates at each step
+# hier_level: ...; learning_signal: can be 'novelty' or 'reward'
+
+n_trials = 100  # number of trials in the game
 n_levels = int(math.ceil(n_lights ** (1/n_lights_tuple)))  # number of levels (formerly lights of different colors)
 
 for ag in range(n_agents):
     # print("\n AGENT", ag)
     env = Environment(n_levels, n_lights, n_lights_tuple, n_trials)
-    # agent = NoveltyAgentF(alpha, epsilon, env)
-    agent = NoveltyAgentH(alpha, epsilon, distraction, env)
+    agent = Agent(agent_stuff, env)
     for trial in range(n_trials):
         old_state = env.state.copy()
         env.state_history[trial, :, :] = old_state

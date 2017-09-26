@@ -17,17 +17,19 @@ from v import V
 # - add eligibility traces -> backward view -> people recall multiple actions they took before an event
 # - humans know that each light belongs to only one group -> reduce values of lights with high values in another group?
 
-class HierarchicalAgent(object):
+class Agent(object):
     """
     This class encompasses all hierarchical agents.
     Hierarchical agents perceive higher-level lights and/or create options.
     """
-    def __init__(self, alpha, epsilon, distraction, env):
+    def __init__(self, agent_stuff, env):
 
         # Agent's RL features
-        self.alpha = alpha  # learning rate
-        self.epsilon = epsilon  # greediness
-        self.distraction = distraction  # propensity to quit unfinished options
+        self.alpha = agent_stuff['alpha'] # learning rate
+        self.epsilon = agent_stuff['epsilon']  # greediness
+        self.distraction = agent_stuff['distraction']  # propensity to quit unfinished options
+        self.hier_level = agent_stuff['hier_level']  # what is the highest-level option the agent can select?
+        self.learning_signal = agent_stuff['learning_signal']
 
         # Agent's thoughts about its environment (novelty, values, theta)
         self.n = np.zeros([env.n_levels, env.n_lights])  # event counter = inverse novelty
@@ -52,12 +54,14 @@ class HierarchicalAgent(object):
             return self.take_action(old_state)  # use option policy to select next option(s)
 
     def __select_option(self, values):
-        if self.__is_greedy():
-            selected_options = np.argwhere(values == np.nanmax(values))  # all options with the highest value
-        else:
-            selected_options = np.argwhere(~ np.isnan(values))  # all options that are not nan
-        select = np.random.randint(len(selected_options))  # randomly select the index of one of the options
-        option = selected_options[select]  # pick that option
+        option = [1000, 1000]
+        while option[0] > self.hier_level:  # keep drawing until option comes from an allowed level
+            if self.__is_greedy():
+                selected_options = np.argwhere(values == np.nanmax(values))  # all options with the highest value
+            else:
+                selected_options = np.argwhere(~ np.isnan(values))  # all options that are not nan
+            select = np.random.randint(len(selected_options))  # randomly select the index of one of the options
+            option = selected_options[select]  # pick that option
         return option
 
     def __is_greedy(self):
@@ -71,19 +75,21 @@ class HierarchicalAgent(object):
         return self.n[event[0], event[1]] == 1
 
     def learn(self, old_state, events):
-        self.__update_theta_history(self.trial)
-        self.__update_option_history()
+        if self.hier_level > 0:
+            self.__update_theta_history(self.trial)
+            self.__update_option_history()
         current_events = np.argwhere(events)
-        self.__learn_from_events(old_state, current_events)  # count events, initialize new options (v & theta)
+        self.__learn_from_events(old_state, events)  # count events, initialize new options (v & theta)
         self.__learn_rest(old_state, current_events, [])  # update theta of ongoing options, v of terminated
 
-    def __learn_from_events(self, old_state, current_events):
+    def __learn_from_events(self, old_state, events):
+        current_events = np.argwhere(events)
         previous_option = []
         for event in current_events:
             self.n[event[0], event[1]] += 1  # update event count (novelty decreases)
             if self.__is_novel(event):
                 self.v.create_option(event)
-                self.v.update(self, event, 1)  # update option value right away
+                self.v.update(self, event, 1, self.learning_signal, events)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
                 self.theta.update(event, 1, old_state, previous_option, self)  # update in-option policy
             previous_option = event.copy()
@@ -109,10 +115,10 @@ class HierarchicalAgent(object):
                 self.theta.update(current_option, 0, old_state, previous_option, self)
             if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
                 if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events
-                    self.v.update(self, current_option, 1)
+                    self.v.update(self, current_option, 1, self.learning_signal)
                 previous_option = self.option_stack.pop()
             elif distracted:  # goal not achieved -> event didn't happen -> update expected novelty toward 0
-                self.v.update(self, current_option, 0)
+                self.v.update(self, current_option, 0, self.learning_signal)
                 previous_option = self.option_stack.pop()
             else:  # if current_option has not terminated, no higher-level option can have terminated
                 break  # no more updating needed
@@ -121,19 +127,3 @@ class HierarchicalAgent(object):
         goal_achieved = any([np.all(option == event) for event in events])  # did option's target event occur?
         distracted = self.distraction > np.random.rand()
         return [goal_achieved, distracted]
-
-
-class OptionAgent(HierarchicalAgent):
-    """
-    This agent creates options.
-    It is not driven by values and selects actions/options randomly.
-    """
-
-
-class NoveltyAgentH(HierarchicalAgent):
-    """
-    This agent is driven by novelty.
-    It sees higher-level lights and recognizes their novelty (in addition to basic lights).
-    It does also form options.
-    """
-

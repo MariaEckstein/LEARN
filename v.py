@@ -11,10 +11,19 @@ class V(object):
     def create_option(self, option):
         self.v[option[0], option[1]] = self.initial_value
 
-    def update(self, agent, option, goal_achieved):
-        novelty = 1 / agent.n[option[0], option[1]]
-        RPE = goal_achieved * novelty - self.v[option[0], option[1]]
+    def update(self, agent, option, goal_achieved, learning_signal='novelty', events=0):
+        if learning_signal == 'novelty':
+            reward_signal = 1 / agent.n[option[0], option[1]]
+        elif learning_signal == 'reward':
+            reward_signal = np.sum(events)
+        else:
+            print('Error! Learning signal must either be "novelty" or "reward"!')
+        RPE = goal_achieved * reward_signal - self.v[option[0], option[1]]
         self.v[option[0], option[1]] += agent.alpha * RPE
+
+    # def reward_update(self, agent, option, goal_achieved):
+    #     reward = sum(new_state[0, :]) - sum(old_state[0, :])
+    #     self.v[action] += self.alpha * (reward - self.v[action])  # classic RL value update
 
     def get_option_values(self, state, option_stack, theta):
         inside_option = len(option_stack) > 0

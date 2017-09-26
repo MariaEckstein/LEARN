@@ -13,6 +13,18 @@ class FlatAgent(object):
         self.epsilon = epsilon
         self.n_lights = n_lights
 
+    def __select_option(self, values):
+        if self.__is_greedy():
+            selected_options = np.argwhere(values == np.nanmax(values))  # all options with the highest value
+        else:
+            selected_options = np.argwhere(~ np.isnan(values))  # all options that are not nan
+        select = np.random.randint(len(selected_options))  # randomly select the index of one of the options
+        option = selected_options[select]  # pick that option
+        return option
+
+    def __is_greedy(self):
+        return np.random.rand() > self.epsilon
+
     def take_action(self, state):
         if np.random.rand() > self.epsilon:
             action = np.argmax(self.v)

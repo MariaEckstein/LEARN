@@ -6,7 +6,8 @@ output: pdf_document
 ---
 
 ```{r Set parameters, load packages, etc.}
-n_actions = "8" #16   # can be 8 (8 basic actions, 3 levels), can be 16 (16 basic actions, 4 levels), or 27 (27 basic actions, 3 levels)
+n_actions = "8"  # can be 8 (8 basic actions, 3 levels), 16 (16 basic actions, 4 levels), or 27 (27 basic actions, 3 levels)
+plot_all_trials = T
 
 library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
 theme_set(theme_bw())
@@ -29,23 +30,17 @@ v_history$X = NULL
 head(v_history)
 summary(v_history)
 
+# State history
+state_history = read.csv(file = file.path(data_dir, paste("state_history_long", n_actions, ".csv", sep = "")), header = T)
+state_history$X = NULL
+head(state_history)
+summary(state_history)
+
 # Option history
 option_history = read.csv(file = file.path(data_dir, paste("option_history_long", n_actions, ".csv", sep = "")), header = T)
 option_history$X = NULL
 head(option_history)
 summary(option_history)
-
-for (tr in unique(option_history$trial)) {
-  plot_dat = subset(option_history, trial == tr)
-  gg_option_history = ggplot(plot_dat, aes(action, level)) +
-    geom_tile(aes(fill = value), colour = "white") +
-    scale_fill_gradient(low = "white", high = "steelblue",
-                        breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1), limits = c(0, 1)) +  # necessary to make each plot based on the same color
-    labs(title = paste("trial", tr)) +
-    theme(legend.position = "none") +
-    facet_wrap(~ step)
-  ggsave(file.path(plot_dir, paste(n_actions, "gg_option_history", tr, ".png", sep = "")), gg_option_history, width = 3 * length(unique(plot_dat$step)), height = 2)
-}
 
 # Theta history
 theta_history = read.csv(file = file.path(data_dir, paste("theta_history_long", n_actions, ".csv", sep = "")), header = T)
@@ -53,93 +48,120 @@ theta_history$X = NULL
 theta_history = subset(theta_history, value != 0)
 head(theta_history)
 summary(theta_history)
-
-for (op in unique(theta_history$option)) {
-  for (tr in unique(theta_history$trial)) {
-    plot_dat = subset(theta_history, option == op & trial == tr)
-    gg_theta_history = ggplot(plot_dat, aes(action, feature)) +
-      geom_tile(aes(fill = value), colour = "white") +
-    scale_fill_gradient(low = "black", high = "white",
-                        breaks = c(0, 0.5, 1), labels = c(-1, 0, 1), limits = c(-1, 1)) +  # necessary to make each plot based on the same color
-      labs(title = paste("trial", tr))
-    filename = file.path(plot_dir, paste(n_actions, "gg_theta_history_option", op, "trial", tr, ".png", sep = ""))
-    ggsave(filename, gg_theta_history_option, width = 2, height = 2)
+```
+```{r Plot actions options events and values over time}
+if (plot_all_trials) {
+  for (tr in 0:max(event_hist$trial)) {
+    
+    # Events/actions in each trial
+    gg_event = ggplot(subset(event_hist, trial == tr), aes(action, level)) +
+      geom_tile(aes(fill = value), color = "white") +
+      scale_fill_gradient(low = "black", high = "yellow") +
+      theme(legend.position = "none") +
+      facet_wrap(~ trial)
+    
+    # State in each trial
+    gg_state = gg_event
+    gg_state$data = subset(state_history, trial == tr)
+    gg_state = gg_state +
+      scale_fill_gradient(low = "black", high = "yellow")
+    
+    # Options in each trial
+    gg_option = gg_event
+    gg_option$data = subset(option_history, trial == tr)
+    gg_option = gg_option +
+      scale_fill_gradient(low = "white", high = "steelblue") +
+      facet_wrap(~ step)
+    
+    # Values in each trial
+    gg_value = gg_event
+    gg_value$data = subset(v_history, trial == tr)
+    gg_value = gg_value  +
+      scale_fill_gradient(low = "white", high = "red", limits = c(0, 1))  # necessary to make each plot based on the same color
+    
+    # Thetas in each trial
+    for (op in unique(theta_history$option)) {
+      theta_dat = subset(theta_history, option == op & updated_option == op & trial == tr)
+      if (nrow(theta_dat) > 0) {
+        gg_theta = gg_value
+        gg_theta$data = theta_dat
+        gg_theta = gg_theta +
+          aes(action, feature) +
+          scale_fill_gradient(low = "white", high = "red", limits = c(-1, 1))  # necessary to make each plot based on the same color
+        
+        # Put theta-option graphs together
+        grob_theta_option = grid.arrange(gg_theta, gg_option, gg_state, ncol = 1)
+        
+        file_path = file.path(plot_dir, paste(n_actions, "grob_theta_option", op))
+        if (!dir.exists(file_path)) {
+          dir.create(file_path)
+        }
+        ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action)/2, height=3*max(event_hist$level))
+      }
+    }
+    
+    # Put value-option-event graphs together
+    grob_event_value = grid.arrange(gg_value, gg_option, gg_event, ncol = 1)
+    
+    file_path = file.path(plot_dir, paste(n_actions, "grob_event_value"))
+    if (!dir.exists(file_path)) {
+      dir.create(file_path)
+    }
+    ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action)/2, height=3*max(event_hist$level))
   }
 }
-```
-```{r Plot action, events, and values over time}
-# Events, trial by trial
-for (tr in 0:max(event_hist$trial)) {
-  gg_event = ggplot(subset(event_hist, trial == tr), aes(action, level)) +
-    geom_tile(aes(fill = value), color = "black") +
-    scale_fill_gradient(low = "white", high = "steelblue",
-                        breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1), limits = c(0, 1)) +  # necessary to make each plot based on the same color
-    theme(legend.position = "none") +
-    labs(x = "") +
-    facet_wrap(~ trial)
-  
-  gg_value = gg_event
-  gg_value$data = subset(v_history, trial == tr)
-  
-  grob_event_value = grid.arrange(gg_value, gg_event, ncol = 1)
-  
-  ggsave(file.path(plot_dir, paste(n_actions, "grob_event_value_", tr, ".png", sep = "")), grob_event_value,
-         width = max(event_hist$action)/2, height = 2*max(event_hist$level))
-}
-# Events, all trials
-ggplot(subset(event_hist, trial < 10 | trial > (max(trial) - 10)), aes(action, level)) +
-  geom_tile(aes(fill = value), colour = "white") +
-  scale_fill_gradient(low = "white", high = "steelblue") +
-  facet_wrap(~ trial)
+# Events, selected trials
+gg_event_multi = gg_event
+gg_event_multi$data = subset(event_hist, trial < 10 | trial > (max(trial) - 10))
+gg_event_multi = gg_event_multi + facet_wrap(~ trial)
+ggsave(file.path(file_path, "gg_event_multi.png"), gg_event_multi, width=6, height=4)
 
-ggplot(subset(v_history, trial < 10 | trial > (max(trial) - 10)), aes(action, level)) +
-  geom_tile(aes(fill = value), colour = "white") +
-  scale_fill_gradient(low = "white", high = "steelblue") +
-  facet_wrap(~ trial)
+# Values, selected trials
+gg_value_multi = gg_value
+gg_value_multi$data = subset(v_history, trial < 10 | trial > (max(trial) - 10))
+gg_value_multi = gg_value_multi + facet_wrap(~ trial)
+ggsave(file.path(file_path, "gg_value_multi.png"), gg_value_multi, width=6, height=4)
+
+# Options, selected trials
+gg_option_multi = gg_option
+gg_option_multi$data = subset(option_history, trial < 10 | trial > (max(trial) - 10))
+gg_option_multi = gg_option_multi + facet_wrap(~ trial)
+ggsave(file.path(file_path, "gg_option_multi.png"), gg_option_multi, width=6, height=4)
 ```
+
 ```{r Plot novelty values over time}
 gg_summary_novelty = ggplot(v_history, aes(trial, value, color = factor(action), group = level)) +
   stat_summary(fun.data = "mean_se", geom = "pointrange") +
   stat_summary(fun.y = "mean", geom = "line", color = "black") +
   geom_line(aes(group = action)) +
-  coord_cartesian(y = c(0, 1)) +
+  coord_cartesian(y=c(0, 1), x=c(0, 350)) +
   theme(legend.position = "none") +
   facet_grid(~ level)
 ggsave(file.path(plot_dir, paste(n_actions, "gg_summary_novelty.png", sep = "")), gg_summary_novelty, width = 6, height = 3)
 ```
 ```{r Plot option features over time}
-ggplot(subset(theta_history, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +  # subset(theta_history_long, option %in% c(0, 1))
+ggplot(subset(theta_history, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +
   geom_point() +
   facet_grid(option ~ feature)
-
-
-ggplot(subset(theta_history_long, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +  # subset(theta_history_long, option %in% c(0, 1))
-  geom_point() +
-  facet_grid(option ~ feature)
-# Explanation of the graph:
-# - rows = options; columns = features
-# - e.g, option 0: the agent learns that features 2-7 are not important, but features 0 and 1 are really important
-# - in feature 0, selecting action 0 
 ```
-```{r Plot option values over time}
 
-th0 = subset(theta_history_long, option == 0 & feature %in% 0:3 & action %in% 0:3)
+```{r Plot option values over time}
+th0 = subset(theta_history, option == 0 & feature %in% 0:7 & action %in% 0:7)
 
 ggplot(th0, aes(trial, value, color = factor(action))) +
   geom_point(position = "jitter", alpha = .3) +
   facet_grid(~ feature)
 
-th0 = subset(theta_history_long, option == 0 & feature %in% 0:9 & action %in% 0:9)
-
 ggplot(th0, aes(trial, value, color = factor(feature))) +
   geom_point(position = "jitter", alpha = .3) +
   facet_grid(~ action)
 
-tiles_opt = expand.grid(feature = 0:max(theta_history_long$feature), option = 0:max(theta_history_long$option), action = max(theta_history_long$action))
-tiles = subset(theta_history_long, trial == max(th0$trial) & option %in% 0:2 & action %in% 0:8)
+tiles_opt = expand.grid(feature = 0:max(theta_history$feature), option = 0:max(theta_history$option), action = max(theta_history$action))
+tiles = subset(theta_history, trial == max(th0$trial) & option %in% 0:2 & action %in% 0:9)
 ggplot(tiles, aes(feature, factor(action))) +
   geom_tile(aes(fill = value), colour = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   facet_grid(~ option)
-
+```
+```{r}
 ```

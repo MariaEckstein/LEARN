@@ -17,7 +17,7 @@ agent_stuff = {'alpha': 0.7, 'epsilon': 0.2, 'distraction': 0, 'hier_level': 100
 # distraction: probability option terminates at each step
 # hier_level: ...; learning_signal: can be 'novelty' or 'reward'
 
-n_trials = 100  # number of trials in the game
+n_trials = 1000  # number of trials in the game
 n_levels = int(math.ceil(n_lights ** (1/n_lights_tuple)))  # number of levels (formerly lights of different colors)
 
 for ag in range(n_agents):
@@ -40,28 +40,39 @@ for ag in range(n_agents):
 colnames = [str(i) for i in range(n_lights)]
 event_history = pd.DataFrame(columns=colnames)
 for trial in range(env.event_history.shape[0]):
-    level_event_history = pd.DataFrame(env.event_history[trial, :, :], columns=colnames)
-    level_event_history['trial'] = trial
-    level_event_history['level'] = range(n_levels)
-    event_history = pd.concat([event_history, level_event_history])
+    trial_event_history = pd.DataFrame(env.event_history[trial, :, :], columns=colnames)
+    trial_event_history['trial'] = trial
+    trial_event_history['level'] = range(n_levels)
+    event_history = pd.concat([event_history, trial_event_history])
 event_history_long = pd.melt(event_history, id_vars=["trial", "level"], var_name="action")
 event_history_long['action'] = pd.to_numeric(event_history_long['action'])
-event_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/event_history_long.csv")
+event_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/event_history_long" + str(n_lights) + ".csv")
+
+# Save state history to csv
+colnames = [str(i) for i in range(n_lights)]
+state_history = pd.DataFrame(columns=colnames)
+for trial in range(env.state_history.shape[0]):
+    trial_state_history = pd.DataFrame(env.state_history[trial, :, :], columns=colnames)
+    trial_state_history['trial'] = trial
+    trial_state_history['level'] = range(n_levels)
+    state_history = pd.concat([state_history, trial_state_history])
+state_history_long = pd.melt(state_history, id_vars=["trial", "level"], var_name="action")
+state_history_long['action'] = pd.to_numeric(state_history_long['action'])
+state_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/state_history_long" + str(n_lights) + ".csv")
 
 # Save value history to csv
 trials = np.arange(n_trials)
 colnames = [str(i) for i in range(n_lights)]
 v_history = pd.DataFrame(columns=colnames)
 for trial in range(agent.v.history.shape[0]):
-    level_v_history = pd.DataFrame(agent.v.history[trial, :, :], columns=colnames)
-    level_v_history['trial'] = trial
-    level_v_history['level'] = range(n_levels)
-    v_history = pd.concat([v_history, level_v_history])
+    trial_v_history = pd.DataFrame(agent.v.history[trial, :, :], columns=colnames)
+    trial_v_history['trial'] = trial
+    trial_v_history['level'] = range(n_levels)
+    v_history = pd.concat([v_history, trial_v_history])
 v_history.head()
 v_history_long = pd.melt(v_history, id_vars=["level", "trial"], var_name="action")
 v_history_long['action'] = pd.to_numeric(v_history_long['action'])
-ident = ""  # "_n_lights" + str(n_lights) + "_n_lights_tuple" + str(n_lights_tuple) + "_alpha" + str(alpha)
-v_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/v_history_long" + ident + ".csv")
+v_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/v_history_long" + str(n_lights) + ".csv")
 
 # Save option history to csv
 colnames = [str(i) for i in range(n_lights)]
@@ -74,23 +85,23 @@ for row in range(agent.option_history.shape[0]):
 option_history.head()
 option_history_long = pd.melt(option_history, id_vars=["trial", "step", "level"], var_name="action")
 option_history_long['action'] = pd.to_numeric(option_history_long['action'])
-option_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/option_history_long.csv")
+option_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/option_history_long" + str(n_lights) + ".csv")
 
 # Save theta history to csv
 colnames = [str(i) for i in range(n_lights)]
-colnames = colnames + ['trial']
+colnames = colnames + ['trial', 'updated_option']
 theta_history = pd.DataFrame(columns=colnames)
 for row in range(agent.theta.history.shape[0]):
     for option in range(agent.theta.history.shape[1]):
         option_theta_history = pd.DataFrame(agent.theta.history[row, option, :, :], columns=colnames)
         option_theta_history['option'] = option
-        option_theta_history['feature'] = range(n_lights)
+        option_theta_history['action'] = range(n_lights)
         theta_history = pd.concat([theta_history, option_theta_history])
 theta_history.head()
 theta_history = theta_history[theta_history['1'] != 0]
-theta_history_long = pd.melt(theta_history, id_vars=["trial", "option", "feature"], var_name="action")
-theta_history_long['action'] = pd.to_numeric(theta_history_long['action'])
-theta_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/theta_history_long.csv")
+theta_history_long = pd.melt(theta_history, id_vars=["trial", "option", "action", "updated_option"], var_name="feature")
+theta_history_long['feature'] = pd.to_numeric(theta_history_long['feature'])
+theta_history_long.to_csv("C:/Users/maria/MEGAsync/Berkeley/LEARN/data/theta_history_long" + str(n_lights) + ".csv")
 
 
 # rownames = ['trial' + str(i) for i in range(n_trials)]

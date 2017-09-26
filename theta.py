@@ -17,16 +17,16 @@ class Theta(object):
                 self.theta[row_ot, range(n_lights_level), :] = initial_theta
                 row_ot += 1
         theta_shape = list(self.theta.shape)
-        theta_shape[-1] += 1
+        theta_shape[-1] += 2
         theta_shape.insert(0, env.n_levels * env.n_trials)
         self.history = np.zeros(theta_shape)
         self.h_row = 0
 
-    def get_option_thetas(self, option, index=None):
-        if index is None:
-            return self.theta[self.option_coord_to_index(option), :, :]
+    def get_option_thetas(self, option, action=None):
+        if action is None:
+            return self.theta[self.option_coord_to_index(option), :, :]  # [option, action, feature]
         else:
-            return self.theta[self.option_coord_to_index(option), index, :]
+            return self.theta[self.option_coord_to_index(option), action, :]
 
     def update(self, current_option, goal_achieved, old_state, previous_option, agent):
         theta_previous_option = self.get_option_thetas(current_option, previous_option[1])

@@ -76,7 +76,6 @@ class Agent(object):
 
     def learn(self, old_state, events):
         if self.hier_level > 0:
-            self.__update_theta_history(self.trial)
             self.__update_option_history()
         current_events = np.argwhere(events)
         self.__learn_from_events(old_state, events)  # count events, initialize new options (v & theta)
@@ -91,12 +90,14 @@ class Agent(object):
                 self.v.create_option(event)
                 self.v.update(self, event, 1, self.learning_signal, events)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
+                self.__update_theta_history(self.trial, event)
                 self.theta.update(event, 1, old_state, previous_option, self)  # update in-option policy
             previous_option = event.copy()
 
-    def __update_theta_history(self, trial):
+    def __update_theta_history(self, trial, option):
         self.theta.history[self.theta.h_row, :, :, :self.theta.n_lights] = self.theta.get()
-        self.theta.history[self.theta.h_row, :, :, -1] = trial
+        self.theta.history[self.theta.h_row, :, :, -2] = trial
+        self.theta.history[self.theta.h_row, :, :, -1] = self.theta.option_coord_to_index(option)
         self.theta.h_row += 1
 
     def __update_option_history(self):
@@ -112,6 +113,7 @@ class Agent(object):
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
             [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
+                self.__update_theta_history(self.trial, current_option)
                 self.theta.update(current_option, 0, old_state, previous_option, self)
             if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
                 if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events

@@ -6,8 +6,13 @@ output: pdf_document
 ---
 
 ```{r Set parameters, load packages, etc.}
-n_actions = "8"  # can be 8 (8 basic actions, 3 levels), 16 (16 basic actions, 4 levels), or 27 (27 basic actions, 3 levels)
+# TD: Make extra folder for reward / novelty!
+
+n_actions = "4"  # can be 4 (2 levels), 8 (8 basic actions, 3 levels), 16 (16 basic actions, 4 levels), or 27 (27 basic actions, 3 levels)
+learning_signal = "novelty"  # Can be "novelty" or "reward"
+alpha = 0.15  # can be 0.7 or 0.15
 plot_all_trials = T
+gg_save = T
 
 library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
 theme_set(theme_bw())
@@ -19,31 +24,31 @@ if (!dir.exists(plot_dir)) {
 ```
 ```{r Read in data}
 # Event history
-event_hist = read.csv(file = file.path(data_dir, paste("event_history_long", n_actions, ".csv", sep = "")), header = T)
+event_hist = read.csv(file = file.path(data_dir, paste("event_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
 event_hist$X = NULL
 head(event_hist)
 summary(event_hist)
 
 # Value history
-v_history = read.csv(file = file.path(data_dir, paste("v_history_long", n_actions, ".csv", sep = "")), header = T)
+v_history = read.csv(file = file.path(data_dir, paste("v_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
 v_history$X = NULL
 head(v_history)
 summary(v_history)
 
 # State history
-state_history = read.csv(file = file.path(data_dir, paste("state_history_long", n_actions, ".csv", sep = "")), header = T)
+state_history = read.csv(file = file.path(data_dir, paste("state_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
 state_history$X = NULL
 head(state_history)
 summary(state_history)
 
 # Option history
-option_history = read.csv(file = file.path(data_dir, paste("option_history_long", n_actions, ".csv", sep = "")), header = T)
+option_history = read.csv(file = file.path(data_dir, paste("option_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
 option_history$X = NULL
 head(option_history)
 summary(option_history)
 
 # Theta history
-theta_history = read.csv(file = file.path(data_dir, paste("theta_history_long", n_actions, ".csv", sep = "")), header = T)
+theta_history = read.csv(file = file.path(data_dir, paste("theta_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
 theta_history$X = NULL
 theta_history = subset(theta_history, value != 0)
 head(theta_history)
@@ -54,7 +59,7 @@ if (plot_all_trials) {
   for (tr in 0:max(event_hist$trial)) {
     
     # Events/actions in each trial
-    gg_event = ggplot(subset(event_hist, trial == tr), aes(action, level)) +
+    gg_event = ggplot(subset(event_hist, trial == tr), aes(action, factor(level))) +
       geom_tile(aes(fill = value), color = "white") +
       scale_fill_gradient(low = "black", high = "yellow") +
       theme(legend.position = "none") +
@@ -96,7 +101,9 @@ if (plot_all_trials) {
         if (!dir.exists(file_path)) {
           dir.create(file_path)
         }
-        ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action)/2, height=3*max(event_hist$level))
+        if (gg_save) {
+          ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action)/2, height=3*max(event_hist$level))
+        }
       }
     }
     
@@ -107,26 +114,31 @@ if (plot_all_trials) {
     if (!dir.exists(file_path)) {
       dir.create(file_path)
     }
-    ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action)/2, height=3*max(event_hist$level))
+    if (gg_save) {
+      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action)/2, height=3*max(event_hist$level))
+    }
   }
 }
 # Events, selected trials
 gg_event_multi = gg_event
 gg_event_multi$data = subset(event_hist, trial < 10 | trial > (max(trial) - 10))
 gg_event_multi = gg_event_multi + facet_wrap(~ trial)
-ggsave(file.path(file_path, "gg_event_multi.png"), gg_event_multi, width=6, height=4)
-
-# Values, selected trials
-gg_value_multi = gg_value
-gg_value_multi$data = subset(v_history, trial < 10 | trial > (max(trial) - 10))
-gg_value_multi = gg_value_multi + facet_wrap(~ trial)
-ggsave(file.path(file_path, "gg_value_multi.png"), gg_value_multi, width=6, height=4)
 
 # Options, selected trials
 gg_option_multi = gg_option
 gg_option_multi$data = subset(option_history, trial < 10 | trial > (max(trial) - 10))
 gg_option_multi = gg_option_multi + facet_wrap(~ trial)
-ggsave(file.path(file_path, "gg_option_multi.png"), gg_option_multi, width=6, height=4)
+
+# Values, selected trials
+gg_value_multi = gg_value
+gg_value_multi$data = subset(v_history, trial < 10 | trial > (max(trial) - 10))
+gg_value_multi = gg_value_multi + facet_wrap(~ trial)
+
+if (gg_save) {
+  ggsave(file.path(file_path, "gg_event_multi.png"), gg_event_multi, width=6, height=4)
+  ggsave(file.path(file_path, "gg_option_multi.png"), gg_option_multi, width=6, height=4)
+  ggsave(file.path(file_path, "gg_value_multi.png"), gg_value_multi, width=6, height=4)
+}
 ```
 
 ```{r Plot novelty values over time}
@@ -136,32 +148,43 @@ gg_summary_novelty = ggplot(v_history, aes(trial, value, color = factor(action),
   geom_line(aes(group = action)) +
   coord_cartesian(y=c(0, 1), x=c(0, 350)) +
   theme(legend.position = "none") +
-  facet_grid(~ level)
-ggsave(file.path(plot_dir, paste(n_actions, "gg_summary_novelty.png", sep = "")), gg_summary_novelty, width = 6, height = 3)
+  facet_grid(~ factor(level, labels = paste("level", level)))
+if (gg_save) {
+  ggsave(file.path(plot_dir, paste(n_actions, "gg_summary_novelty.png", sep = "")), gg_summary_novelty, width = 6, height = 3)
+}
 ```
 ```{r Plot option features over time}
-ggplot(subset(theta_history, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +
+gg_summary_theta = ggplot(subset(theta_history, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +
   geom_point() +
   facet_grid(option ~ feature)
+if (gg_save) {
+  ggsave(file.path(plot_dir, paste(n_actions, "gg_summary_theta.png", sep = "")), gg_summary_theta, width = 10, height = 5)
+}
 ```
 
 ```{r Plot option values over time}
 th0 = subset(theta_history, option == 0 & feature %in% 0:7 & action %in% 0:7)
 
-ggplot(th0, aes(trial, value, color = factor(action))) +
+gg_features_over_time = ggplot(th0, aes(trial, value, color = factor(action))) +
   geom_point(position = "jitter", alpha = .3) +
   facet_grid(~ feature)
 
-ggplot(th0, aes(trial, value, color = factor(feature))) +
+gg_actions_over_time = ggplot(th0, aes(trial, value, color = factor(feature))) +
   geom_point(position = "jitter", alpha = .3) +
   facet_grid(~ action)
 
 tiles_opt = expand.grid(feature = 0:max(theta_history$feature), option = 0:max(theta_history$option), action = max(theta_history$action))
 tiles = subset(theta_history, trial == max(th0$trial) & option %in% 0:2 & action %in% 0:9)
-ggplot(tiles, aes(feature, factor(action))) +
+gg_final_policies = ggplot(tiles, aes(feature, factor(action))) +
   geom_tile(aes(fill = value), colour = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
   facet_grid(~ option)
+
+if (gg_save) {
+  ggsave(file.path(plot_dir, paste(n_actions, "gg_features_over_time.png", sep = "")), gg_features_over_time, width = 10, height = 5)
+  ggsave(file.path(plot_dir, paste(n_actions, "gg_actions_over_time.png", sep = "")), gg_actions_over_time, width = 10, height = 5)
+  ggsave(file.path(plot_dir, paste(n_actions, "gg_final_policies.png", sep = "")), gg_final_policies, width = 10, height = 5)
+}
 ```
 ```{r}
 ```

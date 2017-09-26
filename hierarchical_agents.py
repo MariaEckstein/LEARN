@@ -4,12 +4,11 @@ from v import V
 
 
 # TDs:
+# - make main a function
+# - require consecutive actions to achieve goal (update environment)
 # - options of different forms (different numbers of actions, overlapping)
 # - decide whether lights will stay on (problem humans can use turning-off lights as cues as to which lights belong together in an option) or turn off (problem: model has infinite memory, people not)
-# - find a better way to select actions, not going from left to right
-# - make sure everything is working
 # - what is the agent's goal? Just unstructured exploration? Figure it out? Turn on many lights? Try to find new colors?
-# - look at behavior in more detail
 # - compare agents
 # - bring to humans
 # - add WM: humans can remember that they were executing an option and can give credit to it even when they gave up,

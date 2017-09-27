@@ -148,7 +148,7 @@ gg_summary_novelty = ggplot(v_history, aes(trial, value, color = factor(action),
   geom_line(aes(group = action)) +
   coord_cartesian(y=c(0, 1), x=c(0, 350)) +
   theme(legend.position = "none") +
-  facet_grid(~ factor(level, labels = paste("level", level)))
+  facet_grid(~ factor(level, levels = unique(v_history$level), labels = paste("Level", unique(v_history$level))))
 if (gg_save) {
   ggsave(file.path(plot_dir, paste(n_actions, "gg_summary_novelty.png", sep = "")), gg_summary_novelty, width = 6, height = 3)
 }

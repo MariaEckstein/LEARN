@@ -26,6 +26,7 @@ class Agent(object):
         # Agent's RL features
         self.alpha = agent_stuff['alpha'] # learning rate
         self.epsilon = agent_stuff['epsilon']  # greediness
+        self.lambd = agent_stuff['lambd']
         self.distraction = agent_stuff['distraction']  # propensity to quit unfinished options
         self.hier_level = agent_stuff['hier_level']  # what is the highest-level option the agent can select?
         self.learning_signal = agent_stuff['learning_signal']
@@ -33,7 +34,7 @@ class Agent(object):
         # Agent's thoughts about its environment (novelty, values, theta)
         self.n = np.zeros([env.n_levels, env.n_lights])  # event counter = inverse novelty
         self.trial = 0  # current trial
-        self.v = V(env)
+        self.v = V(env, self.lambd)
         self.theta = Theta(env)
 
         # Agent's plans and memory about his past actions

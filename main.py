@@ -12,7 +12,8 @@ sns.set_style("whitegrid")
 n_lights = 8   # number of level-0 lights (formerly know as "blue" lights); must be n_lights_tuple ** x
 n_lights_tuple = 2  # number of lights per level-0 tuple
 n_agents = 1
-agent_stuff = {'alpha': 0.7, 'epsilon': 0.2, 'distraction': 0, 'hier_level': 100, 'learning_signal': 'novelty'}
+agent_stuff = {'alpha': 0.7, 'epsilon': 0.2, 'distraction': 0, 'hier_level': 100, 'learning_signal': 'novelty',
+               'lambd': 0.2}
 # alpha: agent's learning rate; epsilon: inverse of agent's greediness;
 # distraction: probability option terminates at each step
 # hier_level: ...; learning_signal: can be 'novelty' or 'reward'

@@ -7,20 +7,21 @@ class V(object):
         self.initial_value = 1 / env.n_lights_tuple / 2
         self.v = self.initial_value * np.ones([env.n_levels, env.n_lights])  # values of actions and options
         self.v[1:] = np.nan  # undefined for options
-        self.history = np.zeros([env.n_trials, env.n_levels, env.n_lights])
 
     def create_option(self, option):
         self.v[option[0], option[1]] = self.initial_value
 
-    def update(self, agent, option, goal_achieved, learning_signal='novelty', events=0):
+    def update(self, agent, option, goal_achieved, learning_signal, events):
         if learning_signal == 'novelty':
             reward_signal = np.exp(-self.lambd * agent.n[option[0], option[1]])
+            alpha = 1  # hack to track novelty exactly
         elif learning_signal == 'reward':
             reward_signal = np.sum(events)
+            alpha = agent.alpha  # standard RL reward-learning
         else:
             print('Error! Learning signal must either be "novelty" or "reward"!')
         RPE = goal_achieved * reward_signal - self.v[option[0], option[1]]
-        self.v[option[0], option[1]] += agent.alpha * RPE
+        self.v[option[0], option[1]] += alpha * RPE
 
     def get_option_values(self, state, option_stack, theta):
         inside_option = len(option_stack) > 0

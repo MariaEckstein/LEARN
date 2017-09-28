@@ -1,16 +1,18 @@
 import numpy as np
+import math
 
 
 class Environment(object):
-    def __init__(self, n_levels, n_lights, n_lights_tuple, n_trials):
+    def __init__(self, env_stuff, n_trials):
         self.n_trials = n_trials
-        self.n_levels = n_levels
-        self.n_lights = n_lights
-        self.n_lights_tuple = n_lights_tuple
+        self.n_lights = env_stuff['n_lights']
+        self.n_lights_tuple = env_stuff['n_lights_tuple']
+        self.n_levels = int(math.ceil(self.n_lights ** (1 / self.n_lights_tuple)))  # number of levels
+
         self.state = np.zeros([self.n_levels, self.n_lights], dtype=bool)
         self.events = np.zeros([self.n_levels, self.n_lights], dtype=bool)
-        self.state_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
-        self.event_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
+        # self.state_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
+        # self.event_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
 
     def switch_lights(self, action):
         self.state[action[0], action[1]] = 1

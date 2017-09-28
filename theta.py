@@ -16,11 +16,6 @@ class Theta(object):
                 n_lights_level = env.n_lights // env.n_lights_tuple ** level  # number of lights at level below option
                 self.theta[row_ot, range(n_lights_level), :] = initial_theta
                 row_ot += 1
-        theta_shape = list(self.theta.shape)
-        theta_shape[-1] += 2
-        theta_shape.insert(0, env.n_levels * env.n_trials)
-        self.history = np.zeros(theta_shape)
-        self.h_row = 0
 
     def get_option_thetas(self, option, action=None):
         if action is None:

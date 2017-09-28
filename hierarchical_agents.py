@@ -43,15 +43,15 @@ class Agent(object):
         self.option_row = 0
         self.action_history = np.zeros([env.n_trials, env.n_lights])
 
-    def take_action(self, old_state):
-        self.v.history[self.trial, :, :] = self.v.get()
+    def take_action(self, old_state, hist):
+        hist.v[self.trial, :, :] = self.v.get()
         values = self.v.get_option_values(old_state, self.option_stack, self.theta)  # self.__get_option_values(old_state)
         option = self.__select_option(values)
         self.option_stack.append(option)
         if self.__is_basic(option):
             return option  # execute option
         else:
-            return self.take_action(old_state)  # use option policy to select next option(s)
+            return self.take_action(old_state, hist)  # use option policy to select next option(s)
 
     def __select_option(self, values):
         option = [1000, 1000]
@@ -74,14 +74,13 @@ class Agent(object):
     def __is_novel(self, event):
         return self.n[event[0], event[1]] == 1
 
-    def learn(self, old_state, events):
+    def learn(self, old_state, events, hist):
         if self.hier_level > 0:
             self.__update_option_history()
-        current_events = np.argwhere(events)
-        self.__learn_from_events(old_state, events)  # count events, initialize new options (v & theta)
-        self.__learn_rest(old_state, current_events, [])  # update theta of ongoing options, v of terminated
+        self.__learn_from_events(old_state, events, hist)  # count events, initialize new options (v & theta)
+        self.__learn_rest(old_state, events, hist, [])  # update theta of ongoing options, v of terminated
 
-    def __learn_from_events(self, old_state, events):
+    def __learn_from_events(self, old_state, events, hist):
         current_events = np.argwhere(events)
         previous_option = []
         for event in current_events:
@@ -90,15 +89,15 @@ class Agent(object):
                 self.v.create_option(event)
                 self.v.update(self, event, 1, self.learning_signal, events)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
-                self.__update_theta_history(self.trial, event)
+                hist.update_theta_history(self, event)
                 self.theta.update(event, 1, old_state, previous_option, self)  # update in-option policy
             previous_option = event.copy()
-
-    def __update_theta_history(self, trial, option):
-        self.theta.history[self.theta.h_row, :, :, :self.theta.n_lights] = self.theta.get()
-        self.theta.history[self.theta.h_row, :, :, -2] = trial
-        self.theta.history[self.theta.h_row, :, :, -1] = self.theta.option_coord_to_index(option)
-        self.theta.h_row += 1
+    #
+    # def __update_theta_history(self, trial, option):
+    #     self.theta.history[self.theta.h_row, :, :, :self.theta.n_lights] = self.theta.get()
+    #     self.theta.history[self.theta.h_row, :, :, -2] = trial
+    #     self.theta.history[self.theta.h_row, :, :, -1] = self.theta.option_coord_to_index(option)
+    #     self.theta.h_row += 1
 
     def __update_option_history(self):
         self.step = 0
@@ -109,18 +108,19 @@ class Agent(object):
             self.step += 1
             self.option_row += 1
 
-    def __learn_rest(self, old_state, events, previous_option):
+    def __learn_rest(self, old_state, events, hist, previous_option):
+        current_events = np.argwhere(events)
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
-            [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, events)
+            [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, current_events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
-                self.__update_theta_history(self.trial, current_option)
+                hist.update_theta_history(self, current_option)
                 self.theta.update(current_option, 0, old_state, previous_option, self)
             if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
                 if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events
-                    self.v.update(self, current_option, 1, self.learning_signal)
+                    self.v.update(self, current_option, 1, self.learning_signal, events)
                 previous_option = self.option_stack.pop()
             elif distracted:  # goal not achieved -> event didn't happen -> update expected novelty toward 0
-                self.v.update(self, current_option, 0, self.learning_signal)
+                self.v.update(self, current_option, 0, self.learning_signal, events)
                 previous_option = self.option_stack.pop()
             else:  # if current_option has not terminated, no higher-level option can have terminated
                 break  # no more updating needed

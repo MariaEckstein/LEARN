@@ -6,49 +6,62 @@ output: pdf_document
 ---
 
 ```{r Set parameters, load packages, etc.}
-# TD: Make extra folder for reward / novelty!
+# Load packages
+library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
+theme_set(theme_bw())
 
-n_actions = "4"  # can be 4 (2 levels), 8 (8 basic actions, 3 levels), 16 (16 basic actions, 4 levels), or 27 (27 basic actions, 3 levels)
-learning_signal = "novelty"  # Can be "novelty" or "reward"
-alpha = 0.15  # can be 0.7 or 0.15
+# What's the base directory of that data?
+base_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
+
+# Which plots should be saved?
 plot_all_trials = T
 gg_save = T
 
-library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
-theme_set(theme_bw())
-data_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
+# Which data should be plotted?
+nlights = "16"  # 4, 8, 16, 27
+nlightstuple = "2"  # 2 or 3
+hier = "flat"  # hierarchical or flat
+learning_signal = "reward"  # novelty or reward
+alpha = "0.2"
+lambda = "0.5"
+```
+```{r Read in data}
+# Get data directory, create "plots" subfolder
+data_dir = paste(base_dir, "/nlights_", nlights, "/nlightstuple_", nlightstuple, "/", hier, "/", learning_signal, "/alpha_", alpha, "/lambda_", lambda, sep = "")
 plot_dir = file.path(data_dir, "plots")
 if (!dir.exists(plot_dir)) {
   dir.create(plot_dir)
 }
-```
-```{r Read in data}
+
 # Event history
-event_hist = read.csv(file = file.path(data_dir, paste("event_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
+event_hist = read.csv(file = file.path(data_dir, "event_history_long.csv"), header = T)
 event_hist$X = NULL
 head(event_hist)
 summary(event_hist)
 
 # Value history
-v_history = read.csv(file = file.path(data_dir, paste("v_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
+v_history = read.csv(file = file.path(data_dir, "v_history_long.csv"), header = T)
 v_history$X = NULL
+if (hier == "flat") {
+  v_history$value[v_history$level > 0] = NA
+}
 head(v_history)
 summary(v_history)
 
 # State history
-state_history = read.csv(file = file.path(data_dir, paste("state_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
+state_history = read.csv(file = file.path(data_dir, "state_history_long.csv"), header = T)
 state_history$X = NULL
 head(state_history)
 summary(state_history)
 
 # Option history
-option_history = read.csv(file = file.path(data_dir, paste("option_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
+option_history = read.csv(file = file.path(data_dir, "option_history_long.csv"), header = T)
 option_history$X = NULL
 head(option_history)
 summary(option_history)
 
 # Theta history
-theta_history = read.csv(file = file.path(data_dir, paste("theta_history_long", n_actions, learning_signal, "alpha", alpha, ".csv", sep = "")), header = T)
+theta_history = read.csv(file = file.path(data_dir, "theta_history_long.csv"), header = T)
 theta_history$X = NULL
 theta_history = subset(theta_history, value != 0)
 head(theta_history)
@@ -79,10 +92,11 @@ if (plot_all_trials) {
       facet_wrap(~ step)
     
     # Values in each trial
+    upper_limit = ifelse(hier == "hierarchical", 1, 2) 
     gg_value = gg_event
     gg_value$data = subset(v_history, trial == tr)
     gg_value = gg_value  +
-      scale_fill_gradient(low = "white", high = "red", limits = c(0, 1))  # necessary to make each plot based on the same color
+      scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
     
     # Thetas in each trial
     for (op in unique(theta_history$option)) {
@@ -92,12 +106,16 @@ if (plot_all_trials) {
         gg_theta$data = theta_dat
         gg_theta = gg_theta +
           aes(action, feature) +
-          scale_fill_gradient(low = "white", high = "red", limits = c(-1, 1))  # necessary to make each plot based on the same color
+          scale_fill_gradient(low = "white", high = "red", limits = c(min(theta_history$value), max(theta_history$value)))  # necessary to make each plot based on the same color
         
         # Put theta-option graphs together
-        grob_theta_option = grid.arrange(gg_theta, gg_option, gg_state, ncol = 1)
+        if (hier == "hierarchical") {
+          grob_theta_option = grid.arrange(gg_theta, gg_option, gg_state, ncol = 1)
+        } else {  # flat agents don't have options
+          grob_theta_option = grid.arrange(gg_theta, gg_state, ncol = 1)
+        }
         
-        file_path = file.path(plot_dir, paste(n_actions, "grob_theta_option", op))
+        file_path = file.path(plot_dir, paste("grob_theta_option", op))
         if (!dir.exists(file_path)) {
           dir.create(file_path)
         }
@@ -108,9 +126,14 @@ if (plot_all_trials) {
     }
     
     # Put value-option-event graphs together
-    grob_event_value = grid.arrange(gg_value, gg_option, gg_event, ncol = 1)
     
-    file_path = file.path(plot_dir, paste(n_actions, "grob_event_value"))
+    if (hier == "hierarchical") {
+      grob_event_value = grid.arrange(gg_value, gg_option, gg_event, ncol = 1)
+    } else {
+      grob_event_value = grid.arrange(gg_value, gg_event, ncol = 1)
+    }
+    
+    file_path = file.path(plot_dir, paste("grob_event_value"))
     if (!dir.exists(file_path)) {
       dir.create(file_path)
     }
@@ -146,11 +169,11 @@ gg_summary_novelty = ggplot(v_history, aes(trial, value, color = factor(action),
   stat_summary(fun.data = "mean_se", geom = "pointrange") +
   stat_summary(fun.y = "mean", geom = "line", color = "black") +
   geom_line(aes(group = action)) +
-  coord_cartesian(y=c(0, 1), x=c(0, 350)) +
+  coord_cartesian(y=c(0, upper_limit), x=c(0, 350)) +
   theme(legend.position = "none") +
   facet_grid(~ factor(level, levels = unique(v_history$level), labels = paste("Level", unique(v_history$level))))
 if (gg_save) {
-  ggsave(file.path(plot_dir, paste(n_actions, "gg_summary_novelty.png", sep = "")), gg_summary_novelty, width = 6, height = 3)
+  ggsave(file.path(plot_dir, "gg_summary_novelty.png"), gg_summary_novelty, width = 6, height = 3)
 }
 ```
 ```{r Plot option features over time}
@@ -158,7 +181,7 @@ gg_summary_theta = ggplot(subset(theta_history, option %in% 0:5 & feature %in% 0
   geom_point() +
   facet_grid(option ~ feature)
 if (gg_save) {
-  ggsave(file.path(plot_dir, paste(n_actions, "gg_summary_theta.png", sep = "")), gg_summary_theta, width = 10, height = 5)
+  ggsave(file.path(plot_dir, "gg_summary_theta.png"), gg_summary_theta, width = 10, height = 5)
 }
 ```
 
@@ -181,9 +204,9 @@ gg_final_policies = ggplot(tiles, aes(feature, factor(action))) +
   facet_grid(~ option)
 
 if (gg_save) {
-  ggsave(file.path(plot_dir, paste(n_actions, "gg_features_over_time.png", sep = "")), gg_features_over_time, width = 10, height = 5)
-  ggsave(file.path(plot_dir, paste(n_actions, "gg_actions_over_time.png", sep = "")), gg_actions_over_time, width = 10, height = 5)
-  ggsave(file.path(plot_dir, paste(n_actions, "gg_final_policies.png", sep = "")), gg_final_policies, width = 10, height = 5)
+  ggsave(file.path(plot_dir, "gg_features_over_time.png"), gg_features_over_time, width = 10, height = 5)
+  ggsave(file.path(plot_dir, "gg_actions_over_time.png"), gg_actions_over_time, width = 10, height = 5)
+  ggsave(file.path(plot_dir, "gg_final_policies.png"), gg_final_policies, width = 10, height = 5)
 }
 ```
 ```{r}

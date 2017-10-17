@@ -3,8 +3,8 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
     from hierarchical_agents import Agent
     from environment import Environment
     from history import History
-    import numpy as np
     import pandas as pd
+    import numpy as np
     import os
 
     # Let agent play the game and record data
@@ -16,9 +16,9 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
             old_state = env.state.copy()
             hist.state[trial, :, :] = old_state
             action = agent.take_action(old_state, hist)
-            agent.action_history[trial, action[1]] = 1
+            # agent.action_history[trial, action[1]] = 1
             env.switch_lights(action)
-            events = env.make_events(action)
+            events = env.make_events(action, hist, trial)
             hist.event[trial, :, :] = events.copy()
             agent.learn(old_state, events, hist)
             agent.trial += 1
@@ -34,7 +34,7 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
     hist.save_theta(env, data_path)
 
     # Save option history to csv
-    colnames = [str(i) for i in range(env.n_lights)]
+    colnames = [str(i) for i in range(env.n_basic_actions)]
     colnames = colnames + ['trial', 'step']
     option_history = pd.DataFrame(columns=colnames)
     for row in range(agent.option_history.shape[0]):
@@ -47,24 +47,17 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
     option_history_long.to_csv(data_path + "/option_history_long.csv")
 
 
-n_trials = 500
+n_trials = 50
 n_agents = 1
 agent_stuff = {'hier_level': 0,
-               'learning_signal': 'reward',
+               'learning_signal': 'novelty',
                'alpha': 0.2,
                'lambd': 0.5,
                'epsilon': 0.2,
                'distraction': 0}
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/'
 
-env_stuff = {'n_lights': 4,
-             'n_lights_tuple': 2}
-let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir)
-#
-# env_stuff = {'n_lights': 16,
-#              'n_lights_tuple': 2}
-# let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir)
+env_stuff = {'option_length': 2,
+             'n_options_per_level': [4, 3, 2]}
 
-# env_stuff = {'n_lights': 27,
-#              'n_lights_tuple': 3}
-# let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir)
+let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir)

@@ -4,8 +4,8 @@ import numpy as np
 class V(object):
     def __init__(self, env, lambd):
         self.lambd = lambd
-        self.initial_value = 1 / env.n_lights_tuple / 2
-        self.v = self.initial_value * np.ones([env.n_levels, env.n_lights])  # values of actions and options
+        self.initial_value = 1 / env.n_basic_actions / 2
+        self.v = self.initial_value * np.ones([env.n_levels, env.n_basic_actions])  # values of actions and options
         self.v[1:] = np.nan  # undefined for options
 
     def create_option(self, option):

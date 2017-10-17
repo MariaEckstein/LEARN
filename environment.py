@@ -1,37 +1,56 @@
 import numpy as np
+import itertools
 import math
 
 
 class Environment(object):
     def __init__(self, env_stuff, n_trials):
         self.n_trials = n_trials
-        self.n_lights = env_stuff['n_lights']
-        self.n_lights_tuple = env_stuff['n_lights_tuple']
-        self.n_levels = int(math.ceil(self.n_lights ** (1 / self.n_lights_tuple)))  # number of levels
+        self.n_basic_actions = env_stuff['n_options_per_level'][0]
+        self.n_options_per_level = env_stuff['n_options_per_level']
+        self.option_length = env_stuff['option_length']
+        self.n_levels = len(env_stuff['n_options_per_level'])
+        self.state = np.zeros([self.n_levels, self.n_basic_actions], dtype=bool)
+        self.events = np.zeros([self.n_levels, self.n_basic_actions], dtype=bool)
+        self.past_events = np.full([self.n_trials, self.n_levels], np.nan)
 
-        self.state = np.zeros([self.n_levels, self.n_lights], dtype=bool)
-        self.events = np.zeros([self.n_levels, self.n_lights], dtype=bool)
-        # self.state_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
-        # self.event_history = np.zeros([self.n_trials, self.n_levels, self.n_lights])
+        # Make rules for the game
+        max_options = max(self.n_options_per_level[1:])
+        self.rules = np.full([self.n_levels, max_options, self.option_length], np.nan)
+        for level in range(1, self.n_levels):  # Define rules for all higher-level options (= not level 0)
+            n_options = self.n_options_per_level[level]
+            n_actions = self.n_options_per_level[level-1]
+            all_rules = np.array(list(itertools.combinations(range(n_actions), self.option_length)))  # itertools.combinations draws without replacement
+            np.random.shuffle(all_rules)
+            n_rules = all_rules[:n_options]
+            for option in range(n_options):
+                self.rules[level-1, option, :] = n_rules[option]
 
     def switch_lights(self, action):
+        self.state[:] = 0
         self.state[action[0], action[1]] = 1
         return self.state.copy()
 
-    def make_events(self, action):
+    def make_events(self, action, hist, current_trial):
         self.events[:] = 0
         # record basic events
         self.events[action[0], action[1]] = 1
+        # self.past_events[current_trial, 0] = action[1]
+        # Get event history up to current trial
+        for trial in range(current_trial):
+            for level in range(self.n_levels):
+                event = np.argwhere(hist.event[trial, level, :])
+                if len(event) > 0:
+                    self.past_events[trial, level] = event
+
         # check for events on higher levels
-        first_in_tuple = action[1] - (action[1] % self.n_lights_tuple)
-        for level in range(self.n_levels - 1):  # check for each level if tuple is full
-            tuple_i = range(first_in_tuple, first_in_tuple + self.n_lights_tuple)
-            tuple_complete = np.all(self.state[level, tuple_i])  # check if all lights in tuple_i are on
-            next_level_light = first_in_tuple // self.n_lights_tuple
-            # next_level_off = not self.state[level + 1, next_level_light]  # check if next-level light is off
-            if tuple_complete:  # and next_level_off:
-                self.state[level, tuple_i] = 0  # turn off lower-level lights
-                self.state[level + 1, next_level_light] = 1  # turn on next-level light
-                self.events[level + 1, next_level_light] = 1  # note this event
-            first_in_tuple = next_level_light - (next_level_light % self.n_lights_tuple)
+        for level in range(self.n_levels-1):
+            events = self.past_events[:, level]
+            past_n_actions = events[~np.isnan(events)][-self.option_length:]
+            n_options = self.n_options_per_level[level+1]
+            for option in range(n_options):
+                option_completed = np.all(past_n_actions == self.rules[level, option, :])
+                if option_completed:
+                    self.events[level+1, option] = 1
+
         return self.events.copy()

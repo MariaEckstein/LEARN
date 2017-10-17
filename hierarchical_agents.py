@@ -32,16 +32,16 @@ class Agent(object):
         self.learning_signal = agent_stuff['learning_signal']
 
         # Agent's thoughts about its environment (novelty, values, theta)
-        self.n = np.zeros([env.n_levels, env.n_lights])  # event counter = inverse novelty
+        self.n = np.zeros([env.n_levels, env.n_basic_actions])  # event counter = inverse novelty
         self.trial = 0  # current trial
         self.v = V(env, self.lambd)
         self.theta = Theta(env)
 
         # Agent's plans and memory about his past actions
         self.option_stack = []  # stack of the option(s) that are currently guiding behavior
-        self.option_history = np.zeros([env.n_trials * env.n_levels, env.n_levels, env.n_lights + 2])
+        self.option_history = np.zeros([env.n_trials * env.n_levels, env.n_levels, env.n_basic_actions + 2])
         self.option_row = 0
-        self.action_history = np.zeros([env.n_trials, env.n_lights])
+        # self.action_history = np.zeros([env.n_trials, env.n_basic_actions])
 
     def take_action(self, old_state, hist):
         hist.v[self.trial, :, :] = self.v.get()

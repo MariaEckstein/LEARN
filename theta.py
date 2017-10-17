@@ -4,16 +4,16 @@ import numpy as np
 class Theta(object):
     def __init__(self, env):
         self.option_coord_to_index = self.__get_coord_function(env)
-        self.n_options = np.sum([env.n_lights // env.n_lights_tuple ** i for i in range(env.n_levels)])
-        self.n_lights = env.n_lights
+        self.n_options = np.sum([env.n_basic_actions // env.option_length ** i for i in range(env.n_levels)])
+        self.n_lights = env.n_basic_actions
 
-        initial_theta = 1 / env.n_lights / 2
-        self.theta = np.full([self.n_options - env.n_lights + 1, env.n_lights, env.n_lights], np.nan)  # in-option features
+        initial_theta = 1 / env.n_basic_actions / 2
+        self.theta = np.full([self.n_options - env.n_basic_actions + 1, env.n_basic_actions, env.n_basic_actions], np.nan)  # in-option features
         row_ot = 0
         for level in range(env.n_levels):
-            n_options_level = env.n_lights // (env.n_lights_tuple * env.n_lights_tuple ** level)
-            for option in range(n_options_level):
-                n_lights_level = env.n_lights // env.n_lights_tuple ** level  # number of lights at level below option
+            n_options_level = env.n_basic_actions // (env.option_length * env.option_length ** level)
+            for option in range(n_options_level-1):
+                n_lights_level = env.n_basic_actions // env.option_length ** level  # number of lights at level below option
                 self.theta[row_ot, range(n_lights_level), :] = initial_theta
                 row_ot += 1
 
@@ -35,10 +35,10 @@ class Theta(object):
         def option_coord_to_index(coord):
             level, selected_a = coord
             if level == 0:
-                n_options_below = - env.n_lights
+                n_options_below = - env.n_basic_actions
             else:
-                n_tuples_level = env.n_lights // env.n_lights_tuple ** level
-                n_options_below = np.sum([n_tuples_level * env.n_lights_tuple ** i for i in range(1, level)])
+                n_tuples_level = env.n_basic_actions // env.option_length ** level
+                n_options_below = np.sum([n_tuples_level * env.option_length ** i for i in range(1, level)])
             index = n_options_below + selected_a
             return int(index)
         return option_coord_to_index

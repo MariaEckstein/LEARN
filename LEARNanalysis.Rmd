@@ -15,19 +15,19 @@ base_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
 
 # Which plots should be saved?
 plot_all_trials = T
-gg_save = T
+gg_save = F
 
 # Which data should be plotted?
-nlights = "16"  # 4, 8, 16, 27
-nlightstuple = "2"  # 2 or 3
+n_basic_actions = "4"  # 4, 16, 27
+# nlightstuple = "3"  # 2 or 3
 hier = "flat"  # hierarchical or flat
-learning_signal = "reward"  # novelty or reward
+learning_signal = "novelty"  # novelty or reward
 alpha = "0.2"
 lambda = "0.5"
 ```
 ```{r Read in data}
 # Get data directory, create "plots" subfolder
-data_dir = paste(base_dir, "/nlights_", nlights, "/nlightstuple_", nlightstuple, "/", hier, "/", learning_signal, "/alpha_", alpha, "/lambda_", lambda, sep = "")
+data_dir = paste(base_dir, "/n_basic_actions_", n_basic_actions, "/", hier, "/", learning_signal, "/alpha_", alpha, "/lambda_", lambda, sep = "")
 plot_dir = file.path(data_dir, "plots")
 if (!dir.exists(plot_dir)) {
   dir.create(plot_dir)
@@ -74,15 +74,30 @@ if (plot_all_trials) {
     # Events/actions in each trial
     gg_event = ggplot(subset(event_hist, trial == tr), aes(action, factor(level))) +
       geom_tile(aes(fill = value), color = "white") +
+      labs(x = "Action ID", y = "Level") +
       scale_fill_gradient(low = "black", high = "yellow") +
       theme(legend.position = "none") +
-      facet_wrap(~ trial)
+      facet_grid(~ factor(trial, levels = unique(v_history$trial), labels = paste("Trial", unique(v_history$trial))))
+    file_path = file.path(plot_dir, "events")
+    if (!dir.exists(file_path)) {
+      dir.create(file_path)
+    }
+    if (gg_save) {
+      ggsave(file.path(file_path, paste(tr, "event.png", sep = "")), gg_event, width=max(event_hist$action)/2, height=max(event_hist$level))
+    }
     
     # State in each trial
     gg_state = gg_event
     gg_state$data = subset(state_history, trial == tr)
     gg_state = gg_state +
       scale_fill_gradient(low = "black", high = "yellow")
+    file_path = file.path(plot_dir, "states")
+    if (!dir.exists(file_path)) {
+      dir.create(file_path)
+    }
+    if (gg_save) {
+      ggsave(file.path(file_path, paste(tr, "event.png", sep = "")), gg_event, width=max(event_hist$action)/2, height=max(event_hist$level))
+    }
     
     # Options in each trial
     gg_option = gg_event
@@ -158,9 +173,9 @@ gg_value_multi$data = subset(v_history, trial < 10 | trial > (max(trial) - 10))
 gg_value_multi = gg_value_multi + facet_wrap(~ trial)
 
 if (gg_save) {
-  ggsave(file.path(file_path, "gg_event_multi.png"), gg_event_multi, width=6, height=4)
-  ggsave(file.path(file_path, "gg_option_multi.png"), gg_option_multi, width=6, height=4)
-  ggsave(file.path(file_path, "gg_value_multi.png"), gg_value_multi, width=6, height=4)
+  ggsave(file.path(plot_dir, "gg_event_multi.png"), gg_event_multi, width=6, height=4)
+  ggsave(file.path(plot_dir, "gg_option_multi.png"), gg_option_multi, width=6, height=4)
+  ggsave(file.path(plot_dir, "gg_value_multi.png"), gg_value_multi, width=6, height=4)
 }
 ```
 
@@ -190,23 +205,26 @@ th0 = subset(theta_history, option == 0 & feature %in% 0:7 & action %in% 0:7)
 
 gg_features_over_time = ggplot(th0, aes(trial, value, color = factor(action))) +
   geom_point(position = "jitter", alpha = .3) +
-  facet_grid(~ feature)
+  labs(color = "Action") +
+  facet_grid(~ factor(feature, labels = paste("Feature", unique(th0$feature))))
 
 gg_actions_over_time = ggplot(th0, aes(trial, value, color = factor(feature))) +
+  labs(color = "Feature") +
   geom_point(position = "jitter", alpha = .3) +
-  facet_grid(~ action)
+  facet_grid(~ factor(action, labels = paste("Feature", unique(th0$action))))
 
 tiles_opt = expand.grid(feature = 0:max(theta_history$feature), option = 0:max(theta_history$option), action = max(theta_history$action))
-tiles = subset(theta_history, trial == max(th0$trial) & option %in% 0:2 & action %in% 0:9)
+tiles = subset(theta_history, trial == max(th0$trial))  # & option %in% 0:2 & action %in% 0:9
 gg_final_policies = ggplot(tiles, aes(feature, factor(action))) +
   geom_tile(aes(fill = value), colour = "white") +
   scale_fill_gradient(low = "white", high = "steelblue") +
-  facet_grid(~ option)
+  labs(x = "Feature", y = "ActionID") +
+  facet_grid(~ factor(option, labels = paste("Option", unique(tiles$option))))
 
 if (gg_save) {
   ggsave(file.path(plot_dir, "gg_features_over_time.png"), gg_features_over_time, width = 10, height = 5)
   ggsave(file.path(plot_dir, "gg_actions_over_time.png"), gg_actions_over_time, width = 10, height = 5)
-  ggsave(file.path(plot_dir, "gg_final_policies.png"), gg_final_policies, width = 10, height = 5)
+  ggsave(file.path(plot_dir, "gg_final_policies.png"), gg_final_policies, width = 25, height = 3)
 }
 ```
 ```{r}

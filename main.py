@@ -16,10 +16,7 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
             old_state = env.state.copy()
             hist.state[trial, :, :] = old_state
             action = agent.take_action(old_state, hist)
-            # agent.action_history[trial, action[1]] = 1
-            env.switch_lights(action)
             events = env.make_events(action, hist, trial)
-            hist.event[trial, :, :] = events.copy()
             agent.learn(old_state, events, hist)
             agent.trial += 1
 

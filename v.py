@@ -29,7 +29,7 @@ class V(object):
             values = self.get()  # select option based on agent.v
         else:  # select option based on in-option policy
             option = option_stack[-1]
-            features = 1 - state[option[0] - 1]  # features indicate which lights are OFF
+            features = state[option[0]-1]  # 1 - state[option[0] - 1]  # features indicate which lights are OFF
             theta = theta.get_option_thetas(option)
             option_values = np.dot(theta, features)  # calculate values from thetas
             values = np.full(self.get().shape, np.nan)  # initialize value array

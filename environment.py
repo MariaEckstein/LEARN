@@ -23,7 +23,7 @@ class Environment(object):
             np.random.shuffle(all_rules)
             n_rules = all_rules[:n_options]
             for option in range(n_options):
-                self.rules[level-1, option, :] = n_rules[option]
+                self.rules[level, option, :] = n_rules[option]
 
     def make_events(self, action, hist, trial):
         # Basic-action events (level 0)
@@ -41,7 +41,7 @@ class Environment(object):
                 past_n_actions = past_actions[-self.option_length:]
                 n_options = self.n_options_per_level[level+1]
                 for option in range(n_options):
-                    option_completed = np.all(past_n_actions == self.rules[level, option, :])
+                    option_completed = np.all(past_n_actions == self.rules[level+1, option, :])
                     if option_completed:
                         self.state[level+1, :] = 0
                         self.state[level+1, option] = 1

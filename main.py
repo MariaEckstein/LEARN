@@ -14,10 +14,11 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
         hist = History(env, agent)
         for trial in range(n_trials):
             old_state = env.state.copy()
-            hist.state[trial, :, :] = old_state
-            action = agent.take_action(old_state, hist)
+            action = agent.take_action(old_state, hist, env)
             events = env.make_events(action, hist, trial)
-            agent.learn(old_state, events, hist)
+            hist.state[trial, :, :] = env.state.copy()
+            agent.learn(events, hist)
+            hist.e[trial] = agent.theta.e.copy()
             agent.trial += 1
 
     # Save data
@@ -25,6 +26,7 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
 
+    hist.save_e(env, data_path)
     hist.save_events(env, data_path)
     hist.save_states(env, data_path)
     hist.save_v(env, data_path)
@@ -44,17 +46,18 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
     option_history_long.to_csv(data_path + "/option_history_long.csv")
 
 
-n_trials = 50
+n_trials = 200
 n_agents = 1
-agent_stuff = {'hier_level': 0,
+agent_stuff = {'hier_level': 2,
                'learning_signal': 'novelty',
-               'alpha': 0.2,
+               'alpha': 0.25,
                'lambd': 0.5,
+               'gamma': 0.5,
                'epsilon': 0.2,
                'distraction': 0}
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/'
 
 env_stuff = {'option_length': 2,
-             'n_options_per_level': [4, 3, 2]}
+             'n_options_per_level': [4, 2]}
 
 let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir)

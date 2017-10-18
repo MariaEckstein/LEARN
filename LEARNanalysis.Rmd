@@ -15,19 +15,19 @@ base_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
 
 # Which plots should be saved?
 plot_all_trials = T
-gg_save = F
+gg_save  = T
 
 # Which data should be plotted?
-n_basic_actions = "4"  # 4, 16, 27
+n_options_per_level = "[4, 2]"  # 4, 16, 27
 # nlightstuple = "3"  # 2 or 3
-hier = "flat"  # hierarchical or flat
+hier = "hierarchical"  # hierarchical or flat
 learning_signal = "novelty"  # novelty or reward
 alpha = "0.2"
 lambda = "0.5"
 ```
 ```{r Read in data}
 # Get data directory, create "plots" subfolder
-data_dir = paste(base_dir, "/n_basic_actions_", n_basic_actions, "/", hier, "/", learning_signal, "/alpha_", alpha, "/lambda_", lambda, sep = "")
+data_dir = paste(base_dir, "/n_options_per_level_", n_options_per_level, "/", hier, "/", learning_signal, "/alpha_", alpha, "/lambda_", lambda, sep = "")
 plot_dir = file.path(data_dir, "plots")
 if (!dir.exists(plot_dir)) {
   dir.create(plot_dir)
@@ -66,6 +66,13 @@ theta_history$X = NULL
 theta_history = subset(theta_history, value != 0)
 head(theta_history)
 summary(theta_history)
+
+# Elig. trace history
+e_history = read.csv(file = file.path(data_dir, "e_history_long.csv"), header = T)
+e_history$X = NULL
+# e_history = subset(e_history, value != 0)
+head(e_history)
+summary(e_history)
 ```
 ```{r Plot actions options events and values over time}
 if (plot_all_trials) {
@@ -96,7 +103,7 @@ if (plot_all_trials) {
       dir.create(file_path)
     }
     if (gg_save) {
-      ggsave(file.path(file_path, paste(tr, "event.png", sep = "")), gg_event, width=max(event_hist$action)/2, height=max(event_hist$level))
+      ggsave(file.path(file_path, paste(tr, "state.png", sep = "")), gg_state, width=max(state_history$action)/2, height=max(state_history$level))
     }
     
     # Options in each trial
@@ -110,22 +117,41 @@ if (plot_all_trials) {
     upper_limit = ifelse(hier == "hierarchical", 1, 2) 
     gg_value = gg_event
     gg_value$data = subset(v_history, trial == tr)
-    gg_value = gg_value  +
+    gg_value = gg_value +
       scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
+    
+    # Eligibility traces
+    gg_e = gg_value
+    gg_e$data = subset(e_history, trial == tr)
+    gg_e = gg_e +
+      aes(action, feature) +
+      scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
+      facet_grid(~ factor(option, levels = unique(e_history$option), labels = paste("Option", unique(e_history$option))))
+    grob_e_option = grid.arrange(gg_event, gg_option, gg_e)
+    
+    file_path = file.path(plot_dir, "event_e")
+    if (!dir.exists(file_path)) {
+      dir.create(file_path)
+    }
+    if (gg_save) {
+      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_e_option, width=length(unique(e_history$option)), height=3*length(unique(event_hist$level)))
+    }
     
     # Thetas in each trial
     for (op in unique(theta_history$option)) {
+      gg_e$data = subset(e_history, option == op & trial == tr)
+      
       theta_dat = subset(theta_history, option == op & updated_option == op & trial == tr)
       if (nrow(theta_dat) > 0) {
         gg_theta = gg_value
         gg_theta$data = theta_dat
         gg_theta = gg_theta +
           aes(action, feature) +
-          scale_fill_gradient(low = "white", high = "red", limits = c(min(theta_history$value), max(theta_history$value)))  # necessary to make each plot based on the same color
+          scale_fill_gradient(low = "white", high = "red", limits = c(min(theta_history$value), max(theta_history$value)))  # necessary to make colors consistent across plots
         
         # Put theta-option graphs together
         if (hier == "hierarchical") {
-          grob_theta_option = grid.arrange(gg_theta, gg_option, gg_state, ncol = 1)
+          grob_theta_option = grid.arrange(gg_theta, gg_e, gg_option, gg_event, ncol = 1)
         } else {  # flat agents don't have options
           grob_theta_option = grid.arrange(gg_theta, gg_state, ncol = 1)
         }
@@ -135,13 +161,12 @@ if (plot_all_trials) {
           dir.create(file_path)
         }
         if (gg_save) {
-          ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action)/2, height=3*max(event_hist$level))
+          ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action)/2, height=4*max(event_hist$level))
         }
       }
     }
     
     # Put value-option-event graphs together
-    
     if (hier == "hierarchical") {
       grob_event_value = grid.arrange(gg_value, gg_option, gg_event, ncol = 1)
     } else {
@@ -192,26 +217,27 @@ if (gg_save) {
 }
 ```
 ```{r Plot option features over time}
-gg_summary_theta = ggplot(subset(theta_history, option %in% 0:5 & feature %in% 0:5), aes(trial, value, color = factor(action))) +
+sum_thet_dat = subset(theta_history, option %in% 0:5 & feature %in% 0:5)
+gg_summary_theta = ggplot(sum_thet_dat, aes(trial, value, color = factor(action))) +
   geom_point() +
-  facet_grid(option ~ feature)
+  labs(color="Action") +
+  facet_grid(factor(option, levels=unique(sum_thet_dat$option), labels=paste("Option", unique(sum_thet_dat$option))) ~
+             factor(feature, levels=unique(sum_thet_dat$feature), labels=paste("Feature", unique(sum_thet_dat$feature))))
+
+gg_summary_theta2 = ggplot(sum_thet_dat, aes(trial, value, color = factor(feature))) +
+  geom_point() +
+  labs(color="Feature") +
+  facet_grid(factor(option, levels=unique(sum_thet_dat$option), labels=paste("Option", unique(sum_thet_dat$option))) ~
+             factor(action, levels=unique(sum_thet_dat$action), labels=paste("Action", unique(sum_thet_dat$action))))
+
 if (gg_save) {
   ggsave(file.path(plot_dir, "gg_summary_theta.png"), gg_summary_theta, width = 10, height = 5)
+  ggsave(file.path(plot_dir, "gg_summary_theta2.png"), gg_summary_theta2, width = 10, height = 5)
 }
 ```
 
 ```{r Plot option values over time}
 th0 = subset(theta_history, option == 0 & feature %in% 0:7 & action %in% 0:7)
-
-gg_features_over_time = ggplot(th0, aes(trial, value, color = factor(action))) +
-  geom_point(position = "jitter", alpha = .3) +
-  labs(color = "Action") +
-  facet_grid(~ factor(feature, labels = paste("Feature", unique(th0$feature))))
-
-gg_actions_over_time = ggplot(th0, aes(trial, value, color = factor(feature))) +
-  labs(color = "Feature") +
-  geom_point(position = "jitter", alpha = .3) +
-  facet_grid(~ factor(action, labels = paste("Feature", unique(th0$action))))
 
 tiles_opt = expand.grid(feature = 0:max(theta_history$feature), option = 0:max(theta_history$option), action = max(theta_history$action))
 tiles = subset(theta_history, trial == max(th0$trial))  # & option %in% 0:2 & action %in% 0:9

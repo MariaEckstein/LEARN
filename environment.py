@@ -1,6 +1,5 @@
 import numpy as np
 import itertools
-import math
 
 
 class Environment(object):
@@ -19,7 +18,7 @@ class Environment(object):
         for level in range(1, self.n_levels):  # Define rules for all higher-level options (= not level 0)
             n_options = self.n_options_per_level[level]
             n_actions = self.n_options_per_level[level-1]
-            all_rules = np.array(list(itertools.combinations(range(n_actions), self.option_length)))  # itertools.combinations draws without replacement
+            all_rules = np.array(list(itertools.combinations(range(n_actions), self.option_length)))  # w/out replacem.
             np.random.shuffle(all_rules)
             n_rules = all_rules[:n_options]
             for option in range(n_options):
@@ -32,6 +31,7 @@ class Environment(object):
         self.events[:] = 0
         self.events[0, action[1]] = 1
         hist.event_s[trial, 0] = action[1]
+        hist.state[trial, :, :] = self.state.copy()
 
         # Events on higher levels
         for level in range(self.n_levels-1):

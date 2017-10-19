@@ -18,8 +18,8 @@ plot_all_trials = T
 gg_save  = T
 
 # Which data should be plotted?
-n_options_per_level = "[4, 4, 4, 4]"
-hier = "hierarchical"  # hierarchical or flat
+n_options_per_level = "[5, 5, 5, 5]"
+hier = "flat"  # hierarchical or flat
 learning_signal = "novelty"  # novelty or reward
 alpha = "0.3"
 lambda = "0.5"
@@ -107,20 +107,22 @@ if (plot_all_trials) {
       scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
     
     # Eligibility traces
-    gg_e = gg_value
-    gg_e$data = subset(e_history, trial == tr)
-    gg_e = gg_e +
-      aes(action, feature) +
-      scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
-      facet_grid(~ factor(option, levels = unique(e_history$option), labels = paste("Option", unique(e_history$option))))
-    grob_e_option = grid.arrange(gg_event, gg_option, gg_e)
-    
-    file_path = file.path(plot_dir, "event_e")
-    if (!dir.exists(file_path)) {
-      dir.create(file_path)
-    }
-    if (gg_save) {
-      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_e_option, width=length(unique(e_history$option)), height=3*length(unique(event_hist$level)))
+    if (hier == "hierarchical") {
+      gg_e = gg_value
+      gg_e$data = subset(e_history, trial == tr)
+      gg_e = gg_e +
+        aes(action, feature) +
+        scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
+        facet_grid(~ factor(option, levels = unique(e_history$option), labels = paste("Option", unique(e_history$option))))
+      grob_e_option = grid.arrange(gg_event, gg_option, gg_e)
+      
+      file_path = file.path(plot_dir, "event_e")
+      if (!dir.exists(file_path)) {
+        dir.create(file_path)
+      }
+      if (gg_save) {
+        ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_e_option, width=length(unique(e_history$option)), height=3*length(unique(event_hist$level)))
+      }
     }
     
     # Thetas in each trial

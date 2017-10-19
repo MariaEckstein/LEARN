@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import os
 
 
 class History(object):
@@ -14,6 +15,8 @@ class History(object):
         theta_shape.insert(0, env.n_levels * env.n_trials)
         self.theta = np.zeros(theta_shape)
         self.theta_row = 0
+        self.option = np.zeros([env.n_trials * env.n_levels, env.n_levels, env.n_basic_actions + 2])
+        self.option_row = 0
         self.e = np.zeros(np.append(env.n_trials, agent.theta.theta.shape))  # elig. trace
 
     @staticmethod
@@ -33,9 +36,28 @@ class History(object):
         self.theta[self.theta_row, :, :, -1] = agent.theta.option_coord_to_index(option)
         self.theta_row += 1
 
+    def update_option_history(self, agent):
+        self.step = 0
+        for current_option in agent.option_stack:  # list all current options
+            self.option[self.option_row, current_option[0], current_option[1]] = 1
+            self.option[self.option_row, :, -2] = agent.trial
+            self.option[self.option_row, :, -1] = self.step
+            self.step += 1
+            self.option_row += 1
+
+    def save_all(self, data_dir, env, agent):
+        data_path = self.get_data_path(agent, env, data_dir)
+        if not os.path.isdir(data_path):
+            os.makedirs(data_path)
+        self.save_e(env, data_path)
+        self.save_events(env, data_path)
+        self.save_states(env, data_path)
+        self.save_v(env, data_path)
+        self.save_theta(env, data_path)
+        self.save_options(env, data_path)
+
     def save_e(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]
-        # colnames = colnames + ['trial']
         e_history = pd.DataFrame(columns=colnames)
         for row in range(self.e.shape[0]):
             for option in range(self.e.shape[1]):
@@ -45,7 +67,6 @@ class History(object):
                 option_e_history['trial'] = row
                 e_history = pd.concat([e_history, option_e_history])
         e_history.head()
-        # e_history = e_history[e_history['1'] != 0]
         e_history_long = pd.melt(e_history, id_vars=["trial", "option", "action"], var_name="feature")
         e_history_long['feature'] = pd.to_numeric(e_history_long['feature'])
         e_history_long.to_csv(data_path + "/e_history_long.csv")
@@ -67,6 +88,18 @@ class History(object):
         theta_history_long['feature'] = pd.to_numeric(theta_history_long['feature'])
         theta_history_long.to_csv(data_path + "/theta_history_long.csv")
 
+    def save_options(self, env, data_path):
+        colnames = [str(i) for i in range(env.n_basic_actions)]
+        colnames = colnames + ['trial', 'step']
+        option_history = pd.DataFrame(columns=colnames)
+        for row in range(self.option.shape[0]):
+            step_history = pd.DataFrame(self.option[row, :, :], columns=colnames)
+            step_history['level'] = range(env.n_levels)
+            option_history = pd.concat([option_history, step_history])
+        option_history.head()
+        option_history_long = pd.melt(option_history, id_vars=["trial", "step", "level"], var_name="action")
+        option_history_long['action'] = pd.to_numeric(option_history_long['action'])
+        option_history_long.to_csv(data_path + "/option_history_long.csv")
 
     def save_states(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]

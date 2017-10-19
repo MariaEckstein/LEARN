@@ -43,7 +43,6 @@ class Theta(object):
         theta = theta + agent.alpha * (delta + V_new - V_old) * e   # - agent.alpha * (V_new - V_old) * phi_old_full
         self.theta[self.option_coord_to_index(current_option)] = theta
         self.V_old[current_option[0], current_option[1]] = V_new
-        b = 4
 
     @staticmethod
     def __get_coord_function(env):

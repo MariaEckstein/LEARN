@@ -2,9 +2,9 @@ import numpy as np
 
 
 class V(object):
-    def __init__(self, env, lambd):
-        self.lambd = lambd
-        self.initial_value = 1 / env.n_basic_actions / 2
+    def __init__(self, env, n_lambda):
+        self.n_lambda = n_lambda
+        self.initial_value = 1 / env.n_basic_actions
         self.v = self.initial_value * np.ones([env.n_levels, env.n_basic_actions])  # values of actions and options
         self.v[1:] = np.nan  # undefined for options
 
@@ -13,7 +13,7 @@ class V(object):
 
     def update(self, agent, option, goal_achieved, learning_signal, events):
         if learning_signal == 'novelty':
-            reward_signal = np.exp(-self.lambd * agent.n[option[0], option[1]])
+            reward_signal = np.exp(-self.n_lambda * agent.n[option[0], option[1]])
             alpha = 1  # hack to track novelty exactly
         elif learning_signal == 'reward':
             reward_signal = np.sum(events)

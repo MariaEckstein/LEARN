@@ -23,7 +23,7 @@ class History(object):
                            "/" + hier +\
                            "/" + agent.learning_signal +\
                            "/alpha_" + str(agent.alpha) +\
-                           "/lambda_" + str(agent.lambd) + "/"
+                           "/lambda_" + str(agent.e_lambda) + "/"
         data_path = data_dir + folder_structure
         return data_path
 

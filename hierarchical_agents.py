@@ -19,7 +19,8 @@ class Agent(object):
         # Agent's RL features
         self.alpha = agent_stuff['alpha'] # learning rate
         self.epsilon = agent_stuff['epsilon']  # greediness
-        self.lambd = agent_stuff['lambd']
+        self.e_lambda = agent_stuff['e_lambda']
+        self.n_lambda = agent_stuff['n_lambda']
         self.gamma = agent_stuff['gamma']
         self.distraction = agent_stuff['distraction']  # propensity to quit unfinished options
         self.hier_level = agent_stuff['hier_level']  # what is the highest-level option the agent can select?
@@ -28,7 +29,7 @@ class Agent(object):
         # Agent's thoughts about its environment (novelty, values, theta)
         self.n = np.zeros([env.n_levels, env.n_basic_actions])  # event counter = inverse novelty
         self.trial = 0  # current trial
-        self.v = V(env, self.lambd)
+        self.v = V(env, self.n_lambda)
         self.theta = Theta(env)
 
         # Agent's plans and memory about his past actions
@@ -42,20 +43,6 @@ class Agent(object):
         option = self.__select_option(values)
         self.option_stack.append(option)
         hist.action_s[self.trial, option[0]] = option[1]
-        # Update eligibility traces
-        # for event in events:
-        action_level = option[0]
-        phi = old_state[action_level]
-        option_level = action_level + 1
-        if option_level < len(env.n_options_per_level):
-            using_options = [[option_level, i] for i in range(env.n_options_per_level[option_level])]
-            for opt in using_options:
-                e_old = self.theta.e[self.theta.option_coord_to_index(opt)]
-                n_basic_actions = env.n_options_per_level[0]
-                e_new = np.zeros([n_basic_actions, n_basic_actions])  # actions x features
-                e_new[option[1]] = phi
-                e = self.gamma * self.lambd * e_old + (1 - self.alpha * self.gamma * self.lambd) * e_new
-                self.theta.e[self.theta.option_coord_to_index(opt)] = e
         if self.__is_basic(option):
             return option  # execute option
         else:
@@ -82,13 +69,34 @@ class Agent(object):
     def __is_novel(self, event):
         return self.n[event[0], event[1]] == 1
 
-    def learn(self, events, hist):
+    def learn(self, events, hist, env):
         if self.hier_level > 0:
             self.__update_option_history()
-        self.__learn_from_events(events, hist)  # count events, initialize new options (v & theta)
-        self.__learn_rest(events, hist)  # update theta of ongoing options, v of terminated
+        self.__update_elig_traces(events, hist, env)
+        self.__learn_from_events(events, hist, env)  # count events, initialize new options (v & theta)
+        self.__learn_rest(events, hist, env)  # update theta of ongoing options, v of terminated
 
-    def __learn_from_events(self, events, hist):
+    def __update_elig_traces(self, events, hist, env):
+        current_events = np.argwhere(events)
+        for event in current_events:
+            action_level = event[0]
+            option_level = action_level + 1
+            if option_level < env.n_levels:
+                past_actions = np.append(.999, hist.event_s[:, action_level])
+                past_2_actions = past_actions[~np.isnan(past_actions)][-2:]
+                phi = [i == past_2_actions[-2] for i in range(env.n_basic_actions)]
+                action = int(past_2_actions[-1])
+                n_options = env.n_options_per_level[option_level]
+                using_options = [[option_level, i] for i in range(n_options)]
+                for opt in using_options:
+                    e_old = self.theta.e[self.theta.option_coord_to_index(opt)]
+                    e_new = np.zeros([env.n_basic_actions, env.n_basic_actions])
+                    e_new[action] = phi
+                    e = self.gamma * self.e_lambda * e_old + (1 - self.alpha * self.gamma * self.e_lambda) * e_new
+                    self.theta.e[self.theta.option_coord_to_index(opt)] = e
+                    a = 4
+
+    def __learn_from_events(self, events, hist, env):
         current_events = np.argwhere(events)
         for event in current_events:
             self.n[event[0], event[1]] += 1  # update event count (novelty decreases)
@@ -97,7 +105,7 @@ class Agent(object):
                 self.v.update(self, event, 1, self.learning_signal, events)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
                 hist.update_theta_history(self, event)
-                self.theta.update(event, 1, self, hist)  # update in-option policy
+                self.theta.update(event, 1, self, hist, env)  # update in-option policy
     #
     # def __update_theta_history(self, trial, option):
     #     self.theta.history[self.theta.h_row, :, :, :self.theta.n_lights] = self.theta.get()
@@ -114,14 +122,14 @@ class Agent(object):
             self.step += 1
             self.option_row += 1
 
-    def __learn_rest(self, events, hist):
+    def __learn_rest(self, events, hist, env):
         current_events = np.argwhere(events)
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
             # Rest
             [goal_achieved, distracted] = self.__get_goal_achieved_distracted(current_option, current_events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
                 hist.update_theta_history(self, current_option)
-                self.theta.update(current_option, 0, self, hist)
+                self.theta.update(current_option, 0, self, hist, env)
             if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
                 if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events
                     self.v.update(self, current_option, 1, self.learning_signal, events)

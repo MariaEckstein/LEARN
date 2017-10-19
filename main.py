@@ -17,7 +17,7 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
             action = agent.take_action(old_state, hist, env)
             events = env.make_events(action, hist, trial)
             hist.state[trial, :, :] = env.state.copy()
-            agent.learn(events, hist)
+            agent.learn(events, hist, env)
             hist.e[trial] = agent.theta.e.copy()
             agent.trial += 1
 
@@ -46,18 +46,19 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
     option_history_long.to_csv(data_path + "/option_history_long.csv")
 
 
-n_trials = 200
+n_trials = 500
 n_agents = 1
-agent_stuff = {'hier_level': 2,
+agent_stuff = {'hier_level': 4,
                'learning_signal': 'novelty',
-               'alpha': 0.25,
-               'lambd': 0.5,
-               'gamma': 0.5,
-               'epsilon': 0.2,
+               'alpha': 0.3,  # learning rate
+               'e_lambda': 0.5,  # how fast does the elig. trace evaporate?
+               'n_lambda': 0.2,  # how fast does novelty decay?
+               'gamma': 0.8,  # how much does the agent care about the future?
+               'epsilon': 0.1,  # what percentage of actions is selected randomly?
                'distraction': 0}
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/'
 
 env_stuff = {'option_length': 2,
-             'n_options_per_level': [4, 2]}
+             'n_options_per_level': [4, 4, 4, 4]}
 
 let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir)

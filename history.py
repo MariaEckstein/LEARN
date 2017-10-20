@@ -6,10 +6,11 @@ import os
 class History(object):
     def __init__(self, env, agent):
         self.state = np.zeros([env.n_trials, env.n_levels, env.n_basic_actions])
-        self.event = np.zeros([env.n_trials, env.n_levels, env.n_basic_actions])
+        self.event = np.zeros(self.state.shape)
         self.event_s = np.full([env.n_trials, env.n_levels], np.nan)  # list of past events at each level
-        self.action_s = np.full([env.n_trials, env.n_levels], np.nan)  # list of past actions at each level
+        self.action_s = np.full(self.event_s.shape, np.nan)  # list of past actions at each level
         self.v = np.zeros([env.n_trials, env.n_levels, env.n_basic_actions])
+        self.n = np.zeros(self.v.shape)
         theta_shape = list(agent.theta.theta.shape)
         theta_shape[-1] += 2
         theta_shape.insert(0, env.n_levels * env.n_trials)
@@ -17,30 +18,36 @@ class History(object):
         self.theta_row = 0
         self.option = np.zeros([env.n_trials * env.n_levels, env.n_levels, env.n_basic_actions + 2])
         self.option_row = 0
+        self.step = 0
         self.e = np.zeros(np.append(env.n_trials, agent.theta.theta.shape))  # elig. trace
 
     @staticmethod
     def get_data_path(agent, env, data_dir):
         hier = 'hierarchical' if agent.hier_level > 0 else 'flat'
         folder_structure = "/n_options_per_level_" + str(env.n_options_per_level) +\
+                           "/option_length_" + str(env.option_length) +\
                            "/" + hier +\
                            "/" + agent.learning_signal +\
                            "/alpha_" + str(agent.alpha) +\
-                           "/lambda_" + str(agent.e_lambda) + "/"
+                           "/e_lambda_" + str(agent.e_lambda) +\
+                           "/n_lambda_" + str(agent.n_lambda) +\
+                           "/gamma_" + str(agent.gamma) +\
+                           "/epsilon_" + str(agent.epsilon) +\
+                           "/distraction_" + str(agent.distraction) + "/"
         data_path = data_dir + folder_structure
         return data_path
 
-    def update_theta_history(self, agent, option):
+    def update_theta_history(self, agent, option, trial):
         self.theta[self.theta_row, :, :, :agent.theta.n_basic_actions] = agent.theta.get()
-        self.theta[self.theta_row, :, :, -2] = agent.trial
+        self.theta[self.theta_row, :, :, -2] = trial
         self.theta[self.theta_row, :, :, -1] = agent.theta.option_coord_to_index(option)
         self.theta_row += 1
 
-    def update_option_history(self, agent):
+    def update_option_history(self, agent, trial):
         self.step = 0
-        for current_option in agent.option_stack:  # list all current options
-            self.option[self.option_row, current_option[0], current_option[1]] = 1
-            self.option[self.option_row, :, -2] = agent.trial
+        for option in agent.option_stack:  # list all current options
+            self.option[self.option_row, option[0], option[1]] = 1
+            self.option[self.option_row, :, -2] = trial
             self.option[self.option_row, :, -1] = self.step
             self.step += 1
             self.option_row += 1
@@ -53,6 +60,7 @@ class History(object):
         self.save_events(env, data_path)
         self.save_states(env, data_path)
         self.save_v(env, data_path)
+        self.save_n(env, data_path)
         self.save_theta(env, data_path)
         self.save_options(env, data_path)
 
@@ -137,3 +145,16 @@ class History(object):
         v_history_long = pd.melt(v_history, id_vars=["level", "trial"], var_name="action")
         v_history_long['action'] = pd.to_numeric(v_history_long['action'])
         v_history_long.to_csv(data_path + "/v_history_long.csv")
+
+    def save_n(self, env, data_path):
+        colnames = [str(i) for i in range(env.n_basic_actions)]
+        n_history = pd.DataFrame(columns=colnames)
+        for trial in range(self.n.shape[0]):
+            trial_n_history = pd.DataFrame(self.n[trial, :, :], columns=colnames)
+            trial_n_history['trial'] = trial
+            trial_n_history['level'] = range(env.n_levels)
+            n_history = pd.concat([n_history, trial_n_history])
+        n_history.head()
+        n_history_long = pd.melt(n_history, id_vars=["level", "trial"], var_name="action")
+        n_history_long['action'] = pd.to_numeric(n_history_long['action'])
+        n_history_long.to_csv(data_path + "/n_history_long.csv")

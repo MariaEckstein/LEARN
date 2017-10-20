@@ -18,15 +18,31 @@ plot_all_trials = T
 gg_save  = T
 
 # Which data should be plotted?
-n_options_per_level = "[5, 5, 5, 5]"
-hier = "flat"  # hierarchical or flat
+n_options_per_level = "[4, 4, 4]"
+option_length = 3
+hier = "hierarchical"  # hierarchical or flat
 learning_signal = "novelty"  # novelty or reward
 alpha = "0.3"
-lambda = "0.5"
+e_lambda = "0.5"
+n_lambda = "0.3"
+gamma = "0.9"
+epsilon = "0.1"
+distraction = "0.1"
 ```
 ```{r Read in data}
 # Get data directory, create "plots" subfolder
-data_dir = paste(base_dir, "/n_options_per_level_", n_options_per_level, "/", hier, "/", learning_signal, "/alpha_", alpha, "/lambda_", lambda, sep = "")
+data_dir = paste(base_dir,
+                 "/n_options_per_level_", n_options_per_level,
+                 "/option_length_", option_length,
+                 "/", hier,
+                 "/", learning_signal,
+                 "/alpha_", alpha,
+                 "/e_lambda_", e_lambda,
+                 "/n_lambda_", n_lambda,
+                 "/gamma_", gamma,
+                 "/epsilon_", epsilon,
+                 "/distraction_", distraction,
+                 sep = "")
 plot_dir = file.path(data_dir, "plots")
 if (!dir.exists(plot_dir)) {
   dir.create(plot_dir)
@@ -37,6 +53,14 @@ event_hist = read.csv(file = file.path(data_dir, "event_history_long.csv"), head
 event_hist$X = NULL
 head(event_hist)
 summary(event_hist)
+
+# Novelty history
+n_history = read.csv(file = file.path(data_dir, "n_history_long.csv"), header = T)
+n_history$X = NULL
+n_history$n = n_history$value
+n_history$value = exp(-as.numeric(n_lambda) * n_history$value)
+head(n_history)
+summary(n_history)
 
 # Value history
 v_history = read.csv(file = file.path(data_dir, "v_history_long.csv"), header = T)
@@ -75,14 +99,14 @@ summary(e_history)
 ```
 ```{r Plot actions options events and values over time}
 if (plot_all_trials) {
-  for (tr in 0:max(event_hist$trial)) {
+  for (tr in 1:max(event_hist$trial)) {
     
     # Events/actions in each trial
     gg_event = ggplot(subset(event_hist, trial == tr), aes(action, factor(level))) +
       geom_tile(aes(fill = value), color = "white") +
       geom_text(aes(label = round(value, 2)), size = 1.5) +
       labs(x = "Action ID", y = "Level") +
-      scale_fill_gradient(low = "black", high = "yellow") +
+      scale_fill_gradient(low = "black", high = "yellow", na.value = "grey") +
       theme(legend.position = "none") +
       facet_grid(~ factor(trial, levels = unique(v_history$trial), labels = paste("Trial", unique(v_history$trial))))
     
@@ -106,6 +130,12 @@ if (plot_all_trials) {
     gg_value = gg_value +
       scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
     
+    # Novelty in each trial
+    gg_novel = gg_event
+    gg_novel$data = subset(n_history, trial == tr)
+    gg_novel = gg_novel +
+      scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
+    
     # Eligibility traces
     if (hier == "hierarchical") {
       gg_e = gg_value
@@ -127,9 +157,11 @@ if (plot_all_trials) {
     
     # Thetas in each trial
     for (op in unique(theta_history$option)) {
-      gg_e$data = subset(e_history, option == op & trial == tr)
+      if (hier == "hierarchical") {
+        gg_e$data = subset(e_history, option == op & trial == tr)
+      }
       
-      theta_dat = subset(theta_history, option == op & updated_option == op & trial == tr)
+      theta_dat = subset(theta_history, option == op & updated_option == op & trial == (tr-1))
       if (nrow(theta_dat) > 0) {
         gg_theta = gg_value
         gg_theta$data = theta_dat
@@ -156,9 +188,9 @@ if (plot_all_trials) {
     
     # Put value-option-event graphs together
     if (hier == "hierarchical") {
-      grob_event_value = grid.arrange(gg_value, gg_option, gg_event, ncol = 1)
+      grob_event_value = grid.arrange(gg_value, gg_novel, gg_option, gg_event, ncol = 2)
     } else {
-      grob_event_value = grid.arrange(gg_value, gg_event, ncol = 1)
+      grob_event_value = grid.arrange(gg_value, gg_novel, gg_event, ncol = 2)
     }
     
     file_path = file.path(plot_dir, paste("grob_event_value"))
@@ -166,7 +198,7 @@ if (plot_all_trials) {
       dir.create(file_path)
     }
     if (gg_save) {
-      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action)/2, height=3*max(event_hist$level))
+      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action), height=3*max(event_hist$level))
     }
   }
 }

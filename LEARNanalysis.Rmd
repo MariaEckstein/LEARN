@@ -18,16 +18,16 @@ plot_all_trials = T
 gg_save  = T
 
 # Which data should be plotted?
-n_options_per_level = "[4, 4, 4]"
-option_length = 3
+n_options_per_level = "[3, 3, 3]"
+option_length = 2
 hier = "hierarchical"  # hierarchical or flat
 learning_signal = "novelty"  # novelty or reward
 alpha = "0.3"
 e_lambda = "0.5"
 n_lambda = "0.3"
 gamma = "0.9"
-epsilon = "0.1"
-distraction = "0.1"
+epsilon = "0.2"
+distraction = "0"
 ```
 ```{r Read in data}
 # Get data directory, create "plots" subfolder
@@ -93,13 +93,12 @@ summary(theta_history)
 # Elig. trace history
 e_history = read.csv(file = file.path(data_dir, "e_history_long.csv"), header = T)
 e_history$X = NULL
-# e_history = subset(e_history, value != 0)
 head(e_history)
 summary(e_history)
 ```
 ```{r Plot actions options events and values over time}
 if (plot_all_trials) {
-  for (tr in 1:max(event_hist$trial)) {
+  for (tr in 2:max(event_hist$trial)) {
     
     # Events/actions in each trial
     gg_event = ggplot(subset(event_hist, trial == tr), aes(action, factor(level))) +
@@ -139,7 +138,7 @@ if (plot_all_trials) {
     # Eligibility traces
     if (hier == "hierarchical") {
       gg_e = gg_value
-      gg_e$data = subset(e_history, trial == tr)
+      gg_e$data = subset(e_history, trial == (tr+1))
       gg_e = gg_e +
         aes(action, feature) +
         scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
@@ -158,10 +157,10 @@ if (plot_all_trials) {
     # Thetas in each trial
     for (op in unique(theta_history$option)) {
       if (hier == "hierarchical") {
-        gg_e$data = subset(e_history, option == op & trial == tr)
+        gg_e$data = subset(e_history, option == op & trial == (tr+1))
       }
       
-      theta_dat = subset(theta_history, option == op & updated_option == op & trial == (tr-1))
+      theta_dat = subset(theta_history, option == op & updated_option == op & trial == tr)
       if (nrow(theta_dat) > 0) {
         gg_theta = gg_value
         gg_theta$data = theta_dat

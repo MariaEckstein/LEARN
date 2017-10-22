@@ -18,7 +18,7 @@ class Environment(object):
         for level in range(1, self.n_levels):  # Define rules for all higher-level options (= not level 0)
             n_options = self.n_options_per_level[level]
             n_actions = self.n_options_per_level[level-1]
-            all_rules = np.array(list(itertools.combinations(range(n_actions), self.option_length)))  # w/out replacem.
+            all_rules = np.array(list(itertools.permutations(range(n_actions), self.option_length)))  # w/out replacem.
             np.random.shuffle(all_rules)
             n_rules = all_rules[:n_options]
             for option in range(n_options):

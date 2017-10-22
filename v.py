@@ -4,7 +4,7 @@ import numpy as np
 class V(object):
     def __init__(self, env, n_lambda):
         self.n_lambda = n_lambda
-        self.initial_value = 1
+        self.initial_value = 1 / env.n_basic_actions
         self.v = self.initial_value * np.ones([env.n_levels, env.n_basic_actions])  # level x action
         self.v[1:] = np.nan  # undefined for options
         self.step_counter = np.zeros(self.v.shape)
@@ -19,21 +19,16 @@ class V(object):
             reward_signal = agent.gamma ** steps_till_event_reached * event_novelty
         elif agent.learning_signal == 'reward':
             reward_signal = np.sum(events)
-        RPE = goal_achieved * reward_signal - self.v[option[0], option[1]]
-        self.v[option[0], option[1]] += agent.alpha * RPE
+        delta = goal_achieved * reward_signal - self.v[option[0], option[1]]
+        self.v[option[0], option[1]] += agent.alpha * delta
 
-    def get_option_values(self, state, option_stack, theta):
-        inside_option = len(option_stack) > 0
-        if not inside_option:
-            values = self.get()  # select option based on agent.v
-        else:  # select option based on in-option policy
-            option = option_stack[-1]
-            action_level = option[0] - 1
-            features = state[action_level]
-            theta = theta.get_option_thetas(option)
-            action_values = np.dot(theta, features)  # calculate values from thetas
-            values = np.full(self.get().shape, np.nan)  # initialize value array
-            values[action_level, :] = action_values
+    def get_option_values(self, state, option, theta):
+        action_level = option[0] - 1
+        phi = state[action_level]
+        thetas = theta.get_option_thetas(option)
+        action_values = np.dot(thetas, phi)  # calculate values from thetas
+        values = np.full(self.get().shape, np.nan)  # initialize value array
+        values[action_level, :] = action_values
         return values
 
     def get(self):

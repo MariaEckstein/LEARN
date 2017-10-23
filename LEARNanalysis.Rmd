@@ -18,7 +18,7 @@ plot_all_trials = T
 gg_save  = T
 
 # Which data should be plotted?
-n_options_per_level = "[3, 3, 3]"
+n_options_per_level = "[3, 3, 3, 3, 3, 3]"
 option_length = 2
 hier = "hierarchical"  # hierarchical or flat
 learning_signal = "novelty"  # novelty or reward
@@ -27,7 +27,7 @@ e_lambda = "0.5"
 n_lambda = "0.3"
 gamma = "0.9"
 epsilon = "0.2"
-distraction = "0"
+distraction = "0.1"
 ```
 ```{r Read in data}
 # Get data directory, create "plots" subfolder
@@ -91,14 +91,14 @@ head(theta_history)
 summary(theta_history)
 
 # Elig. trace history
-e_history = read.csv(file = file.path(data_dir, "e_history_long.csv"), header = T)
-e_history$X = NULL
-head(e_history)
-summary(e_history)
+# e_history = read.csv(file = file.path(data_dir, "e_history_long.csv"), header = T)
+# e_history$X = NULL
+# head(e_history)
+# summary(e_history)
 ```
 ```{r Plot actions options events and values over time}
 if (plot_all_trials) {
-  for (tr in 2:max(event_hist$trial)) {
+  for (tr in 0:max(event_hist$trial)) {
     
     # Events/actions in each trial
     gg_event = ggplot(subset(event_hist, trial == tr), aes(action, factor(level))) +
@@ -135,30 +135,30 @@ if (plot_all_trials) {
     gg_novel = gg_novel +
       scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
     
-    # Eligibility traces
-    if (hier == "hierarchical") {
-      gg_e = gg_value
-      gg_e$data = subset(e_history, trial == (tr+1))
-      gg_e = gg_e +
-        aes(action, feature) +
-        scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
-        facet_grid(~ factor(option, levels = unique(e_history$option), labels = paste("Option", unique(e_history$option))))
-      grob_e_option = grid.arrange(gg_event, gg_option, gg_e)
-      
-      file_path = file.path(plot_dir, "event_e")
-      if (!dir.exists(file_path)) {
-        dir.create(file_path)
-      }
-      if (gg_save) {
-        ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_e_option, width=length(unique(e_history$option)), height=3*length(unique(event_hist$level)))
-      }
-    }
+    # # Eligibility traces
+    # if (hier == "hierarchical") {
+    #   gg_e = gg_value
+    #   gg_e$data = subset(e_history, trial == (tr+1))
+    #   gg_e = gg_e +
+    #     aes(action, feature) +
+    #     scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
+    #     facet_grid(~ factor(option, levels = unique(e_history$option), labels = paste("Option", unique(e_history$option))))
+    #   grob_e_option = grid.arrange(gg_event, gg_option, gg_e)
+    # 
+    #   file_path = file.path(plot_dir, "event_e")
+    #   if (!dir.exists(file_path)) {
+    #     dir.create(file_path)
+    #   }
+    #   if (gg_save) {
+    #     ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_e_option, width=length(unique(e_history$option)), height=3*length(unique(event_hist$level)))
+    #   }
+    # }
     
     # Thetas in each trial
     for (op in unique(theta_history$option)) {
-      if (hier == "hierarchical") {
-        gg_e$data = subset(e_history, option == op & trial == (tr+1))
-      }
+      # if (hier == "hierarchical") {
+      #   gg_e$data = subset(e_history, option == op & trial == (tr+1))
+      # }
       
       theta_dat = subset(theta_history, option == op & updated_option == op & trial == tr)
       if (nrow(theta_dat) > 0) {
@@ -170,7 +170,7 @@ if (plot_all_trials) {
         
         # Put theta-option graphs together
         if (hier == "hierarchical") {
-          grob_theta_option = grid.arrange(gg_theta, gg_e, gg_option, gg_event, ncol = 1)
+          grob_theta_option = grid.arrange(gg_theta, gg_option, gg_event, ncol = 1)  # , gg_e
         } else {  # flat agents don't have options
           grob_theta_option = grid.arrange(gg_theta, gg_state, ncol = 1)
         }
@@ -180,7 +180,7 @@ if (plot_all_trials) {
           dir.create(file_path)
         }
         if (gg_save) {
-          ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action)/2, height=4*max(event_hist$level))
+          ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action), height=max(event_hist$level))
         }
       }
     }
@@ -197,7 +197,7 @@ if (plot_all_trials) {
       dir.create(file_path)
     }
     if (gg_save) {
-      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action), height=3*max(event_hist$level))
+      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action), height=max(event_hist$level))
     }
   }
 }

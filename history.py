@@ -4,7 +4,9 @@ import os
 
 
 class History(object):
-    def __init__(self, env, agent):
+    def __init__(self, env, envi, agent, ag):
+        self.envi = envi
+        self.ag = ag
         self.state = np.zeros([env.n_trials, env.n_levels, env.n_basic_actions])
         self.event = np.zeros(self.state.shape)
         self.event_s = np.full([env.n_trials, env.n_levels], np.nan)  # list of past events at each level
@@ -77,7 +79,7 @@ class History(object):
         e_history.head()
         e_history_long = pd.melt(e_history, id_vars=["trial", "option", "action"], var_name="feature")
         e_history_long['feature'] = pd.to_numeric(e_history_long['feature'])
-        e_history_long.to_csv(data_path + "/e_history_long.csv")
+        e_history_long.to_csv(data_path + "/e_history_long_e" + str(self.envi) + "_a" + str(self.ag) + ".csv")
 
     def save_theta(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]
@@ -94,7 +96,7 @@ class History(object):
         theta_history_long = pd.melt(theta_history, id_vars=["trial", "option", "action", "updated_option"],
                                      var_name="feature")
         theta_history_long['feature'] = pd.to_numeric(theta_history_long['feature'])
-        theta_history_long.to_csv(data_path + "/theta_history_long.csv")
+        theta_history_long.to_csv(data_path + "/theta_history_long_e" + str(self.envi) + "_a" + str(self.ag) + ".csv")
 
     def save_options(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]
@@ -107,7 +109,7 @@ class History(object):
         option_history.head()
         option_history_long = pd.melt(option_history, id_vars=["trial", "step", "level"], var_name="action")
         option_history_long['action'] = pd.to_numeric(option_history_long['action'])
-        option_history_long.to_csv(data_path + "/option_history_long.csv")
+        option_history_long.to_csv(data_path + "/option_history_long_e" + str(self.envi) + "_a" + str(self.ag) + ".csv")
 
     def save_states(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]
@@ -119,7 +121,7 @@ class History(object):
             state_history = pd.concat([state_history, trial_state_history])
         state_history_long = pd.melt(state_history, id_vars=["trial", "level"], var_name="action")
         state_history_long['action'] = pd.to_numeric(state_history_long['action'])
-        state_history_long.to_csv(data_path + "/state_history_long.csv")
+        state_history_long.to_csv(data_path + "/state_history_long_e" + str(self.envi) + "_a" + str(self.ag) + ".csv")
 
     def save_events(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]
@@ -131,7 +133,7 @@ class History(object):
             event_history = pd.concat([event_history, trial_event_history])
         event_history_long = pd.melt(event_history, id_vars=["trial", "level"], var_name="action")
         event_history_long['action'] = pd.to_numeric(event_history_long['action'])
-        event_history_long.to_csv(data_path + "/event_history_long.csv")
+        event_history_long.to_csv(data_path + "/event_history_long_e" + str(self.envi) + "_a" + str(self.ag) + ".csv")
 
     def save_v(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]
@@ -144,7 +146,7 @@ class History(object):
         v_history.head()
         v_history_long = pd.melt(v_history, id_vars=["level", "trial"], var_name="action")
         v_history_long['action'] = pd.to_numeric(v_history_long['action'])
-        v_history_long.to_csv(data_path + "/v_history_long.csv")
+        v_history_long.to_csv(data_path + "/v_history_long_e" + str(self.envi) + "_a" + str(self.ag) + ".csv")
 
     def save_n(self, env, data_path):
         colnames = [str(i) for i in range(env.n_basic_actions)]
@@ -157,4 +159,4 @@ class History(object):
         n_history.head()
         n_history_long = pd.melt(n_history, id_vars=["level", "trial"], var_name="action")
         n_history_long['action'] = pd.to_numeric(n_history_long['action'])
-        n_history_long.to_csv(data_path + "/n_history_long.csv")
+        n_history_long.to_csv(data_path + "/n_history_long_e" + str(self.envi) + "_a" + str(self.ag) + ".csv")

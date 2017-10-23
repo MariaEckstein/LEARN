@@ -4,6 +4,8 @@ from v import V
 
 
 # TDs:
+# - fix history -> make nicer, more general functions, avoid repeating myself
+# - save rules
 # - bug in line 107 (hierarchical_agents.py)
 # - try if TD helps now, with just 2 action options
 # - re-read the options paper -> how do they deal with forgetting / value updating in options?
@@ -63,7 +65,7 @@ class Agent(object):
 
     def once_per_option(self, hist, option, trial):
         self.option_stack.append(option)
-        self.v.step_counter[option[0], option[1]] = -1
+        self.v.step_counter[option[0], option[1]] = 0
         hist.action_s[trial, option[0]] = option[1]  # save action choice for every action selected in this trial
 
     def once_per_trial(self, trial, hist):

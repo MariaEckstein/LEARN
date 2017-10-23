@@ -14,8 +14,13 @@ class V(object):
 
     def update(self, agent, option, goal_achieved, events):
         if agent.learning_signal == 'novelty':
-            event_novelty = np.exp(-self.n_lambda * agent.n[option[0], option[1]])
-            steps_till_event_reached = self.step_counter[option[0], option[1]]
+            if agent.hier_level > 0:
+                steps_till_event_reached = self.step_counter[option[0], option[1]]
+                event_novelty = np.exp(-self.n_lambda * agent.n[option[0], option[1]])
+            else:
+                steps_till_event_reached = 0
+                event_novelties = np.exp(-self.n_lambda * np.dot(np.transpose(events), agent.n))  # cur current events
+                event_novelty = np.sum(event_novelties[event_novelties < 1])  # only events that have already happened
             reward_signal = agent.gamma ** steps_till_event_reached * event_novelty
         elif agent.learning_signal == 'reward':
             reward_signal = np.sum(events)

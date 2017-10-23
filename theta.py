@@ -50,10 +50,13 @@ class Theta(object):
         action = int(actions[~np.isnan(actions)][-1])
         values_before = agent.v.get_option_values(state_before, current_option, agent.theta)
         v_before = values_before[action_level, action]
-        values_after = agent.v.get_option_values(state_after, current_option, agent.theta)
-        v_after = max(values_after[action_level, :])  # maxQ
+        if not goal_achieved:
+            values_after = agent.v.get_option_values(state_after, current_option, agent.theta)
+            v_after = max(values_after[action_level, :])  # maxQ
+        else:
+            v_after = 0
         delta = goal_achieved + agent.gamma * v_after - v_before
-        self.theta[self.option_coord_to_index(current_option), action] += agent.alpha * delta
+        self.theta[self.option_coord_to_index(current_option), action, state_before[action_level]] += agent.alpha * delta
         # e = self.e[self.option_coord_to_index(current_option)]
         # self.theta[self.option_coord_to_index(current_option)] += agent.alpha * delta * e
 

@@ -4,6 +4,7 @@ from v import V
 
 
 # TDs:
+# - bug in line 107 (hierarchical_agents.py)
 # - try if TD helps now, with just 2 action options
 # - re-read the options paper -> how do they deal with forgetting / value updating in options?
 # - add TD also to novelty level?  => No! I can use a hier_level=1 agent instead
@@ -66,8 +67,6 @@ class Agent(object):
         hist.action_s[trial, option[0]] = option[1]  # save action choice for every action selected in this trial
 
     def once_per_trial(self, trial, hist):
-        for option in self.option_stack:
-            self.v.step_counter[option[0], option[1]] += 1
         hist.n[trial] = self.n.copy()
         hist.v[trial] = self.v.get()
         # hist.e[trial] = self.theta.e.copy()
@@ -82,10 +81,7 @@ class Agent(object):
         self.__learn_rest(hist, trial, events, state_before, state_after)  # update theta of ongoing options, v of terminated
 
     def __learn_from_events(self, hist, env, trial, events, state_before, state_after):
-        if self.hier_level > 0:
-            current_events = np.argwhere(events)
-        else:
-            current_events = [np.argwhere(events)[0]]  # flat agent: only learn options for basic events
+        current_events = np.argwhere(events)
         for event in current_events:
             self.n[event[0], event[1]] += 1  # update event count (novelty decreases)
             if self.__is_novel(event):
@@ -97,10 +93,7 @@ class Agent(object):
                 self.theta.update(self, hist, event, 1, state_before, state_after)  # update in-option policy
 
     def __learn_rest(self, hist, trial, events, state_before, state_after):
-        if self.hier_level > 0:
-            current_events = np.argwhere(events)
-        else:
-            current_events = [np.argwhere(events)[0]]  # flat agent: only learn options for basic events
+        current_events = np.argwhere(events)
         for current_option in np.flipud(self.option_stack):  # go through options, starting at lowest-level one
             goal_achieved = self.__goal_achieved(current_option, current_events)
             if not self.__is_basic(current_option) and not goal_achieved:  # thetas not covered by learn_from_events
@@ -109,12 +102,19 @@ class Agent(object):
             if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
                 if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events
                     self.v.update(self, current_option, 1, events)
-                self.option_stack.pop()
+                self.finish_option()
             elif self.__is_distracted():  # goal not achieved -> event didn't happen -> update expected novelty toward 0
+                a = self.__is_novel(current_option)  # THIS IS TRUE SOMETIMES! MUST BE A BUG! CAN'T BE NEW IF IT'S IN THE OPTION STACK!
                 self.v.update(self, current_option, 0, events)
-                self.option_stack.pop()
+                self.finish_option()
             else:  # if current_option has not terminated, no higher-level option can have terminated
                 break  # no more updating needed
+
+    def finish_option(self):
+        self.option_stack.pop()
+        if len(self.option_stack) > 0:
+            new_option = self.option_stack[-1]
+            self.v.step_counter[new_option[0], new_option[1]] += 1
 
     # Little helpers
     @staticmethod

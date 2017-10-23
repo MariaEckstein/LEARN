@@ -56,7 +56,7 @@ class History(object):
         data_path = self.get_data_path(agent, env, data_dir)
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
-        self.save_e(env, data_path)
+        # self.save_e(env, data_path)
         self.save_events(env, data_path)
         self.save_states(env, data_path)
         self.save_v(env, data_path)

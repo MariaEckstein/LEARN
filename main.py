@@ -26,9 +26,9 @@ def let_agent_play(n_trials, n_agents, agent_stuff, env_stuff, data_dir):
 n_trials = 200
 n_agents = 1
 env_stuff = {'option_length': 2,
-             'n_options_per_level': [3, 3, 3, 3, 3]}
-agent_stuff = {'hier_level': 0,  # flat (0), hierarchical (len(env_stuff['n_options_per_level'])), in-between?
-               'learning_signal': 'reward',  # novelty or reward
+             'n_options_per_level': [3, 3, 3, 3, 3, 3]}
+agent_stuff = {'hier_level': len(env_stuff['n_options_per_level']),  # flat (0), hierarchical (len(env_stuff['n_options_per_level'])), in-between?
+               'learning_signal': 'novelty',  # novelty or reward
                'alpha': 0.3,  # learning rate
                'e_lambda': 0.5,  # how much of the elig. trace is retained from trial to trial?
                'n_lambda': 0.3,  # how fast does novelty decay?

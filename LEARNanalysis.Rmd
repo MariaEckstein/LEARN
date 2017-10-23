@@ -19,13 +19,14 @@ gg_save  = T
 
 # Which data should be plotted?
 n_options_per_level = "[3, 3, 3, 3, 3, 3]"
+n_levels = 6
 option_length = 2
 hier = "hierarchical"  # hierarchical or flat
 learning_signal = "novelty"  # novelty or reward
 alpha = "0.3"
 e_lambda = "0.5"
 n_lambda = "0.3"
-gamma = "0.9"
+gamma = "0.7"
 epsilon = "0.2"
 distraction = "0.1"
 ```
@@ -49,13 +50,13 @@ if (!dir.exists(plot_dir)) {
 }
 
 # Event history
-event_hist = read.csv(file = file.path(data_dir, "event_history_long.csv"), header = T)
+event_hist = read.csv(file = file.path(data_dir, "event_history_long_e0_a0.csv"), header = T)
 event_hist$X = NULL
 head(event_hist)
 summary(event_hist)
 
 # Novelty history
-n_history = read.csv(file = file.path(data_dir, "n_history_long.csv"), header = T)
+n_history = read.csv(file = file.path(data_dir, "n_history_long_e0_a0.csv"), header = T)
 n_history$X = NULL
 n_history$n = n_history$value
 n_history$value = exp(-as.numeric(n_lambda) * n_history$value)
@@ -63,7 +64,7 @@ head(n_history)
 summary(n_history)
 
 # Value history
-v_history = read.csv(file = file.path(data_dir, "v_history_long.csv"), header = T)
+v_history = read.csv(file = file.path(data_dir, "v_history_long_e0_a0.csv"), header = T)
 v_history$X = NULL
 if (hier == "flat") {
   v_history$value[v_history$level > 0] = NA
@@ -72,26 +73,26 @@ head(v_history)
 summary(v_history)
 
 # State history
-state_history = read.csv(file = file.path(data_dir, "state_history_long.csv"), header = T)
+state_history = read.csv(file = file.path(data_dir, "state_history_long_e0_a0.csv"), header = T)
 state_history$X = NULL
 head(state_history)
 summary(state_history)
 
 # Option history
-option_history = read.csv(file = file.path(data_dir, "option_history_long.csv"), header = T)
+option_history = read.csv(file = file.path(data_dir, "option_history_long_e0_a0.csv"), header = T)
 option_history$X = NULL
 head(option_history)
 summary(option_history)
 
 # Theta history
-theta_history = read.csv(file = file.path(data_dir, "theta_history_long.csv"), header = T)
+theta_history = read.csv(file = file.path(data_dir, "theta_history_long_e0_a0.csv"), header = T)
 theta_history$X = NULL
 theta_history = subset(theta_history, value != 0)
 head(theta_history)
 summary(theta_history)
 
 # Elig. trace history
-# e_history = read.csv(file = file.path(data_dir, "e_history_long.csv"), header = T)
+# e_history = read.csv(file = file.path(data_dir, "e_history_long_e0_a0.csv"), header = T)
 # e_history$X = NULL
 # head(e_history)
 # summary(e_history)
@@ -123,7 +124,7 @@ if (plot_all_trials) {
       facet_wrap(~ step)
     
     # Values in each trial
-    upper_limit = ifelse(hier == "hierarchical", 1, 2) 
+    upper_limit = ifelse(learning_signal == "novelty", 1, n_levels) 
     gg_value = gg_event
     gg_value$data = subset(v_history, trial == tr)
     gg_value = gg_value +

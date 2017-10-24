@@ -54,37 +54,50 @@
 
 It is desirable for a complex cognitive system, like a human, to understand its environment in a way that allows prediction of future states and events. This is because with the ability to predict the results of its own actions, an agent will be able to control its environment, creating the states and events it desires. The prediction and control of future rewards, for example, has been formalized in reinforcement learning theory (\cite{sutton_reinforcement_2017}). In this framework, an agent learns over time how much (cumulative, temporally discounted) future reward to expect, given a current state of the environment and the agent's action policy. Given the ability to predict, the agent can then maximize future rewards by adjusting its action policy.
 
-- But it's not all about rewards: We want to learn the structure of the environment (predictive model) before we know what will be rewarding.
-- Advances in this direction: Machado, ... (cite papers that talk about exploration; sparse rewards; old 2-step paper)
-- What would a predictive model look like that is not focused on reward? Instead of a flat table that specifies how much reward to expect from each state-action pair, we would have a collection of policies that specify how to reach various states in the environment. The agent can control the environment by selecting whatever sub-goal it likes at the moment. Once rewards are added, it can use the structure to get more rewards. 
-- For example, an infant looking at a computer screen sees rectangles and shapes of different colors and sizes, some of the moving, some of the stationary. A computer-savy adult, on the other hand, sees Mac or Windows, a bug in the code, or the need to download a new plugin. This dramatic change arises from interactions with the computer, leading to the creation of a structure model of the computer. (Other examples: language learning, motor learning)
-- Research that says that humans represent things hierarchically: Chess study - chunking; old research on expertise; TS; Anderson? Making coffee
-- The big question is now how to find valuable sub-goals. Much research, mostly about bottleneck states in the state space (Botvinick -> check in my powerpoint). Intrinsic motivation instead, i.e., curiosity = explore novel / unpredicted states (Deepak Pathak's citations)
+\begin{itemize}
+	\item But it's not all about rewards: We want to learn the structure of the environment (predictive model) before we know what will be rewarding.
+	\item Example: When an infant looks at a computer monitor, she probably sees a black rectangular frame, filled with colored rectangles and blinking blobs of various sizes. A computer-savy adult, on the other hand, sees a Mac or Windows machine, a bug in the code, or the need to download a new plugin. The perception of the computer monitor changes dramatically upon interaction with it. Interaction creates a structure model of the computer (Other examples: language learning, motor learning)
+	\item Indeed, psychological research of the last century has stressed again and again that humans represent their world hierarchically (Chess study - chunking; old research on expertise; TS; Anderson? Making coffee)
+	\item What would a predictive model look like that is not focused on reward? Instead of a flat table that specifies how much reward to expect from each state-action pair, we would have a collection of policies that specify how to reach various states in the environment. The agent can control the environment by selecting whatever sub-goal it likes at the moment. Once rewards are added, it can use the learned structure to maximize rewards. 
+	\item Advances in this direction: Machado, ... (cite papers that talk about exploration; sparse rewards; old 2-step paper; Schmidhuber; Deepak Pathak; ...)
+	\item The big question is now how to find valuable sub-goals. Much research, mostly about bottleneck states in the state space (Botvinick -> check in my powerpoint).
+	\item I will use intrinsic motivation instead, i.e., curiosity = explore novel / unpredicted states (Deepak Pathak's citations; Botvinick paper? -> check powerpoint)
+\end{itemize}
 
 
 \section{Methods}
 
 \subsection{Novelty-based hierarchical RL}
 
-- Agent explores the environment, which has no rewards, with the only goal of "understanding" it (predict \& control).
-- Agent is intrinsically motivated to explore novel states rather than very familiar ones (curiosity).
-- Once the agent selects a goal, it uses the corresponding option policy for action selection. Option policies are acquired through interaction with the environment.
-- Tabular algo: Discrete states and actions.
+\begin{itemize}
+	\item The agent explores the environment, which has no rewards, with the only goal of "understanding" it (understand = predict \& control). The environment produces events in response to the agent's actions, according to certain rules (see below).
+	\item The agent is intrinsically motivated to investigate novel events rather than re-visit familiar ones (curiosity).
+	\item Once the agent decides to investigate a specific event, its actions are guided by a specific event policy that is geared toward producing the corresponding event ("option policy" in the HRL framework). Event policies are learned over time through interaction with the environment.
+	\item Note: The algo is tabular: Discrete states and actions, no function approximation using ANNs.
+\end{itemize}
 
-Implementation of action selection:
-$P(a|s) = 1 - \epsilon$ if $v(a_i, s) > v(a_j, s), \forall a_j, j \neq i$
-$P(a|s) = \epsilon$ if $v(a_j, s) > v(a_i, s), \exists a_j, j \neq i$
+\subsubsection{Action selection based on curiosity}
 
-Implementation of curiosity $c(e)$ about event $e$ (function of novelty $n$):
-$c(e) = c(e) + \alpha_{c} (n(e) - c(e))$
-$n(e) = e^{-\lambda x(e)}$; $x(e)$ is a simple count of how often event $e$ has occurred.
+\begin{itemize}
+	\item The agent's curiosity $c_e$ for a specific event $e$ is determined by the novelty $n_e$ of the event (RL-like updating). $n_e$ is a function of how often $e$ has occurred ($i_e$) and of the rate $\lambda$ at which novelty decays for a given agent. Taken together: $c_e = c_e + \alpha_c (n_e - c_e)$ and $n_e = e^{-\lambda i_e}$. Restriction: Agents can only be curious about events that have occurred at least once. 
+	\item The agent selects events using an $\epsilon$-greedy policy: In $1-\epsilon$ \% of cases, it selects the event that it is most curious about; in $\epsilon$ \% of cases, it randomly selects among all other events.
+\end{itemize}
 
-Implementation of option policy learning:
+\subsubsection{Action selection based on event policies}
+
+\begin{itemize}
+	\item Once the agent selects a specific event, it uses the corresponding event policy $\pi_e$ for actions selection. $\pi_e$ is guided by $\epsilon$-greedy action selection using a Q-value table of feature-action associations. 
+	\item All $\pi$'s are initialized uniformly over all actions. The first update happens when the event occurs for the first time.
+	\item The agent represents states in terms of features, corresponding to the history of its own actions and events (1 trial back). 
+	\item 
+\end{itemize}
+
 
 
 - (discrete) States: defined in terms of previously encountered events and previous actions (could be extended to include other features of the environment). We use feature-based RL: each features = event last time; we limit it to 1 previous action, could be easily extended. Features are defined as the previous event on this level.
 - Agent has a limited set of basic actions that it can execute. Each action leads to a specific observable event in the environment.
 - Policy $\pi$: agent 
+
 
 
 We created and compared several different reinforcement learning agents in their performance on this task. Agents were either driven by reward or novelty (or a combination of both); and agents either chose among basic actions only (flat) or created abstract options, from which they could select in addition to the basic actions (hierarchical). Although only a subsection of agents was hierarchical, we will refer to all actions and options as options from now on.

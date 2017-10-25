@@ -21,6 +21,8 @@ if (!dir.exists(plot_dir)) {
 
 # Should plots be saved?
 gg_save  = T
+analyze_my_algo = F
+analyze_all_algos = T
 
 # Which data should be plotted?
 which_data = list()
@@ -34,7 +36,6 @@ which_data$gamma = "0.7"
 which_data$epsilon = "0.2"
 which_data$distraction = "0.1"
 ```
-
 ```{r read_in_data function}
 read_in_data = function(base_dir, gg_save, which_data) {
   
@@ -53,14 +54,15 @@ read_in_data = function(base_dir, gg_save, which_data) {
                    sep = "")
   file_id = paste("e", which_data$env_id, "_a", which_data$agent_id, sep = "")
   
+  # Rules
+  file_name = paste("rules_e", env_id, ".csv", sep = "")
+  rules = read.csv(file = file.path(data_dir, file_name), header = T)
+  rules$X = NULL
+  
   # Event history
   file_name = paste("event_history_long_", file_id, ".csv", sep = "")
   event_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   event_hist$X = NULL
-  event_hist$agent = which_data$agent_id
-  event_hist$env = which_data$env_id
-  event_hist$hier = which_data$hier
-  event_hist$learning_signal = which_data$learning_signal
   
   # Novelty history
   file_name = paste("n_history_long_", file_id, ".csv", sep = "")
@@ -73,7 +75,7 @@ read_in_data = function(base_dir, gg_save, which_data) {
   file_name = paste("v_history_long_", file_id, ".csv", sep = "")
   v_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   v_hist$X = NULL
-  if (hier == "flat") {
+  if (which_data$hier == "flat") {
     v_hist$value[v_hist$level > 0] = NA
   }
   
@@ -98,120 +100,105 @@ read_in_data = function(base_dir, gg_save, which_data) {
   # e_hist = read.csv(file = file.path(data_dir, file_name, header = T)
   # e_hist$X = NULL
   
+  # Add ids to data
+  n_hist$hier = which_data$hier
+  n_hist$learning_signal = which_data$learning_signal
+  n_hist$agent_id = which_data$agent_id
+  n_hist$env_id = which_data$env_id
+  v_hist$hier = which_data$hier
+  v_hist$learning_signal = which_data$learning_signal
+  v_hist$agent_id = which_data$agent_id
+  v_hist$env_id = which_data$env_id
+  state_hist$hier = which_data$hier
+  state_hist$learning_signal = which_data$learning_signal
+  state_hist$agent_id = which_data$agent_id
+  state_hist$env_id = which_data$env_id
+  option_hist$hier = which_data$hier
+  option_hist$learning_signal = which_data$learning_signal
+  option_hist$agent_id = which_data$agent_id
+  option_hist$env_id = which_data$env_id
+  theta_hist$hier = which_data$hier
+  theta_hist$learning_signal = which_data$learning_signal
+  theta_hist$agent_id = which_data$agent_id
+  theta_hist$env_id = which_data$env_id
+  event_hist$hier = which_data$hier
+  event_hist$learning_signal = which_data$learning_signal
+  event_hist$agent_id = which_data$agent_id
+  event_hist$env_id = which_data$env_id
+        
   # Return data
-  return(list(n_hist, v_hist, state_hist, option_hist, theta_hist, event_hist))
+  return(list(n_hist, v_hist, theta_hist, rules, state_hist, option_hist, event_hist))#
 }
 ```
-```{r Read in data}
-# Set up empty dataframes that will contain all the data
-n_hist = data.frame()
-v_hist = data.frame()
-state_hist = data.frame()
-option_hist = data.frame()
-theta_hist = data.frame()
-event_hist = data.frame()
-        
-for (hier in c("hierarchical", "flat")) {
-  for (learning_signal in c("novelty", "reward")) {
-    for (agent_id in seq(0, 1)) {
-      for (env_id in seq(5, 6)) {
-        
-        # Define data to be loaded
-        which_data$hier = hier
-        which_data$learning_signal = learning_signal
-        which_data$agent_id = agent_id
-        which_data$env_id = env_id
-        
-        # Load data
-        all_dat_i = read_in_data(base_dir, gg_save, which_data)
-        n_hist_i = all_dat_i[1][[1]]
-        v_hist_i = all_dat_i[2][[1]]
-        state_hist_i = all_dat_i[3][[1]]
-        option_hist_i = all_dat_i[4][[1]]
-        theta_hist_i = all_dat_i[5][[1]]
-        event_hist_i = all_dat_i[6][[1]]
-        
-        # Add id to data
-        n_hist_i$hier = hier
-        n_hist_i$learning_signal = learning_signal
-        n_hist_i$agent_id = agent_id
-        n_hist_i$env_id = env_id
-        v_hist_i$hier = hier
-        v_hist_i$learning_signal = learning_signal
-        v_hist_i$agent_id = agent_id
-        v_hist_i$env_id = env_id
-        state_hist_i$hier = hier
-        state_hist_i$learning_signal = learning_signal
-        state_hist_i$agent_id = agent_id
-        state_hist_i$env_id = env_id
-        option_hist_i$hier = hier
-        option_hist_i$learning_signal = learning_signal
-        option_hist_i$agent_id = agent_id
-        option_hist_i$env_id = env_id
-        theta_hist_i$hier = hier
-        theta_hist_i$learning_signal = learning_signal
-        theta_hist_i$agent_id = agent_id
-        theta_hist_i$env_id = env_id
-        event_hist_i$hier = hier
-        event_hist_i$learning_signal = learning_signal
-        event_hist_i$agent_id = agent_id
-        event_hist_i$env_id = env_id
-        
-        
-        # Attach to dataframe containing all data
-        n_hist = rbind(n_hist, n_hist_i)
-        v_hist = rbind(v_hist, v_hist_i)
-        state_hist = rbind(state_hist, state_hist_i)
-        option_hist = rbind(option_hist, option_hist_i)
-        theta_hist = rbind(theta_hist, theta_hist_i)
-        event_hist = rbind(event_hist, event_hist_i)
-
-      }
+```{r Read in hierarchical novelty-based algo data}
+if (analyze_my_algo) {
+  # Set up empty dataframes that will contain all the data
+  algo_n = data.frame()
+  algo_v = data.frame()
+  algo_theta = data.frame()
+  rules = data.frame()
+  
+  which_data$hier = "hierarchical"
+  which_data$learning_signal = "novelty"
+  
+  for (agent_id in seq(0, 10)) {
+    for (env_id in seq(0, 6)) {
+      
+      # Define data to be loaded
+      which_data$agent_id = agent_id
+      which_data$env_id = env_id
+      
+      # Load data
+      all_dat_i = read_in_data(base_dir, gg_save, which_data)
+      algo_n_i = all_dat_i[1][[1]]
+      algo_v_i = all_dat_i[2][[1]]
+      algo_theta_i = all_dat_i[3][[1]]
+      rules_i = all_dat_i[4][[1]]
+      
+      # Attach to dataframe containing all data
+      algo_n = rbind(algo_n, algo_n_i)
+      algo_v = rbind(algo_v, algo_v_i)
+      algo_theta = rbind(algo_theta, algo_theta_i)
+      rules = rbind(rules, rules_i)
+  
     }
   }
 }
-
-head(event_hist)
-```
-```{r Summarize data}
 ```
 
 # Show my algo
 
+```{r Rules}
+rules
+```
 ```{r Decrease in novelty / value over time}
-algo_n = subset(n_hist, hier == "hierarchical" & learning_signal == "novelty" & agent_id %in% c(0, 1) & env_id == 5)
-algo_v = subset(v_hist, hier == "hierarchical" & learning_signal == "novelty")
-algo_theta = subset(theta_hist, hier == "hierarchical" & learning_signal == "novelty")
-algo_theta_sum = ddply(subset(algo_theta, trial == max(algo_theta$trial)),
+gg_summary_novelty = ggplot(subset(algo_n, env_id == 4), aes(trial, value, group = factor(action), color = factor(action), fill = factor(action))) +
+  stat_summary(fun.data = "mean_se", geom = "smooth") +
+  labs(x = "Trial", y = "Novelty") +
+  facet_grid(~ factor(level, levels = unique(algo_n$level), labels = paste("Level", unique(algo_n$level))))
+
+gg_summary_value = gg_summary_novelty + labs(y = "Curiosity")
+gg_summary_value$data = subset(algo_v, env_id == 4)
+
+if (gg_save) {
+  ggsave(file.path(plot_dir, "gg_summary_value.png"), gg_summary_value, width = 10, height = 2)
+  ggsave(file.path(plot_dir, "gg_summary_novelty.png"), gg_summary_novelty, width = 10, height = 2)
+}
+```
+```{r Final option policies}
+algo_theta_sum = ddply(subset(algo_theta, trial == max(algo_theta$trial) & env_id == 4),
                        .(option, action, feature),
                        summarize,
                        value = mean(value, na.rm = T))
 
-summary(algo_n)
-gg_summary_novelty = ggplot(algo_n, aes(trial, value)) +
-  stat_summary(aes(group = factor(action), color = factor(action)), fun.data = "mean_se", geom = "pointrange") +
-  stat_summary(aes(group = level), color = "black", fun.data = "mean_se", geom = "pointrange") +
-  labs(x = "Trial", y = "Novelty") +
-  theme(legend.position = "none") +
-  facet_grid(~ factor(level, levels = unique(algo_n$level), labels = paste("Level", unique(algo_n$level))))
-
-gg_summary_value = gg_summary_novelty + labs(y = "Curiosity")
-gg_summary_value$data = algo_v
-
-if (gg_save) {
-  ggsave(file.path(plot_dir, "gg_summary_value.png"), gg_summary_value, width = 10, height = 5)
-  ggsave(file.path(plot_dir, "gg_summary_novelty.png"), gg_summary_novelty, width = 10, height = 5)
-}
-```
-```{r Final option policies}
 gg_theta = ggplot(algo_theta_sum, aes(action, feature)) +
   geom_tile(aes(fill = value), color = "white") +
   geom_text(aes(label = round(value, 2)), size = 1.5) +
   scale_fill_gradient(low = "white", high = "red", limits = c(min(algo_theta$value), max(algo_theta$value))) +
   labs(x = "Action ID", y = "Level") +
   theme(legend.position = "none") +
-  facet_wrap( ~ factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))),
-              ncol = 3)
+  facet_wrap(~ factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))),
+             ncol = 3)
 
 if (gg_save) {
   ggsave(file.path(plot_dir, "gg_theta.png"), gg_theta, width = 3, height = 5)
@@ -223,7 +210,65 @@ if (gg_save) {
 
 # Subtract agent's values from optimal values in each trial
 
-# Plot
+# Plto
 ```
+
+# Compare agents
+
+```{r Read in data from all algos}
+if (analyze_all_algos) {
+  # Set up empty dataframes that will contain all the data
+  n_hist = data.frame()
+  v_hist = data.frame()
+  state_hist = data.frame()
+  option_hist = data.frame()
+  theta_hist = data.frame()
+  event_hist = data.frame()
+  rules = data.frame()
+  
+  for (hier in c("hierarchical", "flat")) {
+    for (learning_signal in c("novelty", "reward")) {
+      for (agent_id in seq(0, 5)) {
+        for (env_id in seq(0, 5)) {
+          
+          print(c(hier, learning_signal, agent_id, env_id))
+          
+          # Define data to be loaded
+          which_data$hier = hier
+          which_data$learning_signal = learning_signal
+          which_data$agent_id = agent_id
+          which_data$env_id = env_id
+          
+          # Load data
+          all_dat_i = read_in_data(base_dir, gg_save, which_data)
+          n_hist_i = all_dat_i[1][[1]]
+          v_hist_i = all_dat_i[2][[1]]
+          theta_hist_i = all_dat_i[3][[1]]
+          rules_i = all_dat_i[4][[1]]
+          state_hist_i = all_dat_i[5][[1]]
+          option_hist_i = all_dat_i[6][[1]]
+          event_hist_i = all_dat_i[7][[1]]
+          
+          # Attach to dataframe containing all data
+          n_hist = rbind(n_hist, n_hist_i)
+          v_hist = rbind(v_hist, v_hist_i)
+          theta_hist = rbind(theta_hist, theta_hist_i)
+          state_hist = rbind(state_hist, state_hist_i)
+          option_hist = rbind(option_hist, option_hist_i)
+          event_hist = rbind(event_hist, event_hist_i)
+          rules = rbind(rules, rules_i)
+  
+        }
+      }
+    }
+  }
+}
+```
+
+```{r Numbers of events}
+disc_events = 
+ggplot(event_hist, aes(trial, ))
+```
+
 ```{r}
 ```

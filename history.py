@@ -5,9 +5,11 @@ import os
 
 class History(object):
     def __init__(self, env, agent):
+        # Info for saving dataframes
         self.data_path = ''
         self.env_id = env.id
         self.agent_id = agent.id
+        # Dataframes to be saved
         self.state = np.zeros([env.n_trials, env.n_levels, env.n_basic_actions])
         self.event = np.zeros(self.state.shape)
         self.event_s = np.full([env.n_trials, env.n_levels], np.nan)  # list of past events at each level
@@ -29,10 +31,10 @@ class History(object):
         if not os.path.isdir(self.data_path):
             os.makedirs(self.data_path)
         self.save_rules(env)
-        self.save_events(env)
-        self.save_states(env)
-        self.save_v(env)
-        self.save_n(env)
+        self.save_rest(env, 'state')
+        self.save_rest(env, 'event')
+        self.save_rest(env, 'v')
+        self.save_rest(env, 'n')
         self.save_theta(env)
         self.save_options(env)
         # self.save_e(env)
@@ -61,7 +63,7 @@ class History(object):
             op += env.option_length + 1
             trial_rules['level'] = level
             rules = pd.concat([rules, trial_rules])
-        rules.to_csv(self.data_path + "/rules_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
+        rules.to_csv(self.data_path + "/rules_e" + str(self.env_id) + ".csv")
 
     def save_theta(self, env):
         colnames = [str(i) for i in range(env.n_basic_actions)]
@@ -73,7 +75,6 @@ class History(object):
                 option_theta_history['option'] = option
                 option_theta_history['action'] = range(env.n_basic_actions)
                 theta_history = pd.concat([theta_history, option_theta_history])
-        theta_history.head()
         theta_history = theta_history[theta_history['1'] != 0]
         theta_history_long = pd.melt(theta_history, id_vars=["trial", "option", "action", "updated_option"],
                                      var_name="feature")
@@ -88,60 +89,23 @@ class History(object):
             step_history = pd.DataFrame(self.option[row, :, :], columns=colnames)
             step_history['level'] = range(env.n_levels)
             option_history = pd.concat([option_history, step_history])
-        option_history.head()
         option_history_long = pd.melt(option_history, id_vars=["trial", "step", "level"], var_name="action")
         option_history_long['action'] = pd.to_numeric(option_history_long['action'])
         option_history_long.to_csv(self.data_path + "/option_history_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
 
-    def save_states(self, env):
+    def save_rest(self, env, which_data):
+        # for which_data = ['state', 'event', 'v', 'n']!
+        data = getattr(self, which_data)
         colnames = [str(i) for i in range(env.n_basic_actions)]
-        state_history = pd.DataFrame(columns=colnames)
-        for trial in range(self.state.shape[0]):
-            trial_state_history = pd.DataFrame(self.state[trial, :, :], columns=colnames)
-            trial_state_history['trial'] = trial
-            trial_state_history['level'] = range(env.n_levels)
-            state_history = pd.concat([state_history, trial_state_history])
-        state_history_long = pd.melt(state_history, id_vars=["trial", "level"], var_name="action")
-        state_history_long['action'] = pd.to_numeric(state_history_long['action'])
-        state_history_long.to_csv(self.data_path + "/state_history_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
-
-    def save_events(self, env):
-        colnames = [str(i) for i in range(env.n_basic_actions)]
-        event_history = pd.DataFrame(columns=colnames)
-        for trial in range(self.event.shape[0]):
-            trial_event_history = pd.DataFrame(self.event[trial, :, :], columns=colnames)
-            trial_event_history['trial'] = trial
-            trial_event_history['level'] = range(env.n_levels)
-            event_history = pd.concat([event_history, trial_event_history])
-        event_history_long = pd.melt(event_history, id_vars=["trial", "level"], var_name="action")
-        event_history_long['action'] = pd.to_numeric(event_history_long['action'])
-        event_history_long.to_csv(self.data_path + "/event_history_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
-
-    def save_v(self, env):
-        colnames = [str(i) for i in range(env.n_basic_actions)]
-        v_history = pd.DataFrame(columns=colnames)
-        for trial in range(self.v.shape[0]):
-            trial_v_history = pd.DataFrame(self.v[trial, :, :], columns=colnames)
-            trial_v_history['trial'] = trial
-            trial_v_history['level'] = range(env.n_levels)
-            v_history = pd.concat([v_history, trial_v_history])
-        v_history.head()
-        v_history_long = pd.melt(v_history, id_vars=["level", "trial"], var_name="action")
-        v_history_long['action'] = pd.to_numeric(v_history_long['action'])
-        v_history_long.to_csv(self.data_path + "/v_history_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
-
-    def save_n(self, env):
-        colnames = [str(i) for i in range(env.n_basic_actions)]
-        n_history = pd.DataFrame(columns=colnames)
-        for trial in range(self.n.shape[0]):
-            trial_n_history = pd.DataFrame(self.n[trial, :, :], columns=colnames)
-            trial_n_history['trial'] = trial
-            trial_n_history['level'] = range(env.n_levels)
-            n_history = pd.concat([n_history, trial_n_history])
-        n_history.head()
-        n_history_long = pd.melt(n_history, id_vars=["level", "trial"], var_name="action")
-        n_history_long['action'] = pd.to_numeric(n_history_long['action'])
-        n_history_long.to_csv(self.data_path + "/n_history_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
+        data_hist = pd.DataFrame(columns=colnames)
+        for trial in range(data.shape[0]):
+            trial_hist = pd.DataFrame(data[trial, :, :], columns=colnames)
+            trial_hist['trial'] = trial
+            trial_hist['level'] = range(env.n_levels)
+            data_hist = pd.concat([data_hist, trial_hist])
+        data_hist_long = pd.melt(data_hist, id_vars=["trial", "level"], var_name="action")
+        data_hist_long['action'] = pd.to_numeric(data_hist_long['action'])
+        data_hist_long.to_csv(self.data_path + "/" + which_data + "_hist_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
 
     # def save_e(self, env):
     #     colnames = [str(i) for i in range(env.n_basic_actions)]

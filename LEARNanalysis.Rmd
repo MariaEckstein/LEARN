@@ -5,7 +5,7 @@ date: "September 23, 2017"
 output: pdf_document
 ---
 
-```{r Set parameters, load packages, etc.}
+```{r Set parameters load packages etc.}
 # Load packages
 library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
 theme_set(theme_bw())
@@ -14,7 +14,6 @@ theme_set(theme_bw())
 base_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
 
 # Which plots should be saved?
-plot_all_trials = T
 gg_save  = T
 
 # Which data should be plotted?
@@ -98,110 +97,109 @@ summary(theta_history)
 # summary(e_history)
 ```
 ```{r Plot actions options events and values over time}
-if (plot_all_trials) {
-  for (tr in 0:max(event_hist$trial)) {
-    
-    # Events/actions in each trial
-    gg_event = ggplot(subset(event_hist, trial == tr), aes(action, factor(level))) +
-      geom_tile(aes(fill = value), color = "white") +
-      geom_text(aes(label = round(value, 2)), size = 1.5) +
-      labs(x = "Action ID", y = "Level") +
-      scale_fill_gradient(low = "black", high = "yellow", na.value = "grey") +
-      theme(legend.position = "none") +
-      facet_grid(~ factor(trial, levels = unique(v_history$trial), labels = paste("Trial", unique(v_history$trial))))
-    
-    # State in each trial
-    gg_state = gg_event
-    gg_state$data = subset(state_history, trial == tr)
-    gg_state = gg_state +
-      scale_fill_gradient(low = "black", high = "yellow")
-    
-    # Options in each trial
-    gg_option = gg_event
-    gg_option$data = subset(option_history, trial == tr)
-    gg_option = gg_option +
-      scale_fill_gradient(low = "white", high = "steelblue") +
-      facet_wrap(~ step)
-    
-    # Values in each trial
-    upper_limit = ifelse(learning_signal == "novelty", 1, n_levels) 
-    gg_value = gg_event
-    gg_value$data = subset(v_history, trial == tr)
-    gg_value = gg_value +
-      scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
-    
-    # Novelty in each trial
-    gg_novel = gg_event
-    gg_novel$data = subset(n_history, trial == tr)
-    gg_novel = gg_novel +
-      scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
-    
-    # # Eligibility traces
+for (tr in 0:max(event_hist$trial)) {
+  
+  # Events/actions in each trial
+  gg_event = ggplot(subset(event_hist, trial == tr), aes(action, factor(level))) +
+    geom_tile(aes(fill = value), color = "white") +
+    geom_text(aes(label = round(value, 2)), size = 1.5) +
+    labs(x = "Action ID", y = "Level") +
+    scale_fill_gradient(low = "black", high = "yellow", na.value = "grey") +
+    theme(legend.position = "none") +
+    facet_grid(~ factor(trial, levels = unique(v_history$trial), labels = paste("Trial", unique(v_history$trial))))
+  
+  # State in each trial
+  gg_state = gg_event
+  gg_state$data = subset(state_history, trial == tr)
+  gg_state = gg_state +
+    scale_fill_gradient(low = "black", high = "yellow")
+  
+  # Options in each trial
+  gg_option = gg_event
+  gg_option$data = subset(option_history, trial == tr)
+  gg_option = gg_option +
+    scale_fill_gradient(low = "white", high = "steelblue") +
+    facet_wrap(~ step)
+  
+  # Values in each trial
+  upper_limit = ifelse(learning_signal == "novelty", 1, n_levels) 
+  gg_value = gg_event
+  gg_value$data = subset(v_history, trial == tr)
+  gg_value = gg_value +
+    scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
+  
+  # Novelty in each trial
+  gg_novel = gg_event
+  gg_novel$data = subset(n_history, trial == tr)
+  gg_novel = gg_novel +
+    scale_fill_gradient(low = "white", high = "red", limits = c(0, upper_limit))  # necessary to make each plot based on the same color
+  
+  # # Eligibility traces
+  # if (hier == "hierarchical") {
+  #   gg_e = gg_value
+  #   gg_e$data = subset(e_history, trial == (tr+1))
+  #   gg_e = gg_e +
+  #     aes(action, feature) +
+  #     scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
+  #     facet_grid(~ factor(option, levels = unique(e_history$option), labels = paste("Option", unique(e_history$option))))
+  #   grob_e_option = grid.arrange(gg_event, gg_option, gg_e)
+  # 
+  #   file_path = file.path(plot_dir, "event_e")
+  #   if (!dir.exists(file_path)) {
+  #     dir.create(file_path)
+  #   }
+  #   if (gg_save) {
+  #     ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_e_option, width=length(unique(e_history$option)), height=3*length(unique(event_hist$level)))
+  #   }
+  # }
+  
+  # Thetas in each trial
+  for (op in unique(theta_history$option)) {
     # if (hier == "hierarchical") {
-    #   gg_e = gg_value
-    #   gg_e$data = subset(e_history, trial == (tr+1))
-    #   gg_e = gg_e +
-    #     aes(action, feature) +
-    #     scale_fill_gradient(low = "white", high = "purple", limits = c(min(e_history$value), max(e_history$value))) +
-    #     facet_grid(~ factor(option, levels = unique(e_history$option), labels = paste("Option", unique(e_history$option))))
-    #   grob_e_option = grid.arrange(gg_event, gg_option, gg_e)
-    # 
-    #   file_path = file.path(plot_dir, "event_e")
-    #   if (!dir.exists(file_path)) {
-    #     dir.create(file_path)
-    #   }
-    #   if (gg_save) {
-    #     ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_e_option, width=length(unique(e_history$option)), height=3*length(unique(event_hist$level)))
-    #   }
+    #   gg_e$data = subset(e_history, option == op & trial == (tr+1))
     # }
     
-    # Thetas in each trial
-    for (op in unique(theta_history$option)) {
-      # if (hier == "hierarchical") {
-      #   gg_e$data = subset(e_history, option == op & trial == (tr+1))
-      # }
+    theta_dat = subset(theta_history, option == op & updated_option == op & trial == tr)
+    if (nrow(theta_dat) > 0) {
+      gg_theta = gg_value
+      gg_theta$data = theta_dat
+      gg_theta = gg_theta +
+        aes(action, feature) +
+        scale_fill_gradient(low = "white", high = "red", limits = c(min(theta_history$value), max(theta_history$value)))  # necessary to make colors consistent across plots
       
-      theta_dat = subset(theta_history, option == op & updated_option == op & trial == tr)
-      if (nrow(theta_dat) > 0) {
-        gg_theta = gg_value
-        gg_theta$data = theta_dat
-        gg_theta = gg_theta +
-          aes(action, feature) +
-          scale_fill_gradient(low = "white", high = "red", limits = c(min(theta_history$value), max(theta_history$value)))  # necessary to make colors consistent across plots
-        
-        # Put theta-option graphs together
-        if (hier == "hierarchical") {
-          grob_theta_option = grid.arrange(gg_theta, gg_option, gg_event, ncol = 1)  # , gg_e
-        } else {  # flat agents don't have options
-          grob_theta_option = grid.arrange(gg_theta, gg_state, ncol = 1)
-        }
-        
-        file_path = file.path(plot_dir, paste("grob_theta_option", op))
-        if (!dir.exists(file_path)) {
-          dir.create(file_path)
-        }
-        if (gg_save) {
-          ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action), height=max(event_hist$level))
-        }
+      # Put theta-option graphs together
+      if (hier == "hierarchical") {
+        grob_theta_option = grid.arrange(gg_theta, gg_option, gg_event, ncol = 1)  # , gg_e
+      } else {  # flat agents don't have options
+        grob_theta_option = grid.arrange(gg_theta, gg_state, ncol = 1)
+      }
+      
+      file_path = file.path(plot_dir, paste("grob_theta_option", op))
+      if (!dir.exists(file_path)) {
+        dir.create(file_path)
+      }
+      if (gg_save) {
+        ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_theta_option, width=max(event_hist$action), height=max(event_hist$level))
       }
     }
-    
-    # Put value-option-event graphs together
-    if (hier == "hierarchical") {
-      grob_event_value = grid.arrange(gg_value, gg_novel, gg_option, gg_event, ncol = 2)
-    } else {
-      grob_event_value = grid.arrange(gg_value, gg_novel, gg_event, ncol = 2)
-    }
-    
-    file_path = file.path(plot_dir, paste("grob_event_value"))
-    if (!dir.exists(file_path)) {
-      dir.create(file_path)
-    }
-    if (gg_save) {
-      ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action), height=max(event_hist$level))
-    }
+  }
+  
+  # Put value-option-event graphs together
+  if (hier == "hierarchical") {
+    grob_event_value = grid.arrange(gg_value, gg_novel, gg_option, gg_event, ncol = 2)
+  } else {
+    grob_event_value = grid.arrange(gg_value, gg_novel, gg_event, ncol = 2)
+  }
+  
+  file_path = file.path(plot_dir, paste("grob_event_value"))
+  if (!dir.exists(file_path)) {
+    dir.create(file_path)
+  }
+  if (gg_save) {
+    ggsave(file.path(file_path, paste("trial", tr, ".png", sep = "")), grob_event_value, width=max(event_hist$action), height=max(event_hist$level))
   }
 }
+
 # Events, selected trials
 gg_event_multi = gg_event
 gg_event_multi$data = subset(event_hist, trial < 10 | trial > (max(trial) - 10))

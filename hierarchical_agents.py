@@ -22,6 +22,7 @@ class Agent(object):
     Hierarchical agents perceive higher-level lights and/or create options.
     """
     def __init__(self, agent_stuff, env):
+        self.id = agent_stuff['id']
         # Agent's RL features
         self.alpha = agent_stuff['alpha']  # learning rate
         self.epsilon = agent_stuff['epsilon']  # greediness

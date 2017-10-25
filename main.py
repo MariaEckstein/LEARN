@@ -22,39 +22,51 @@ def let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir):
     from history import History
 
     # Let agents play the game
-    for ag in range(n_agents):
+    ag = 0
+    while ag <= n_agents:
+        agent_stuff['id'] = ag
         agent = Agent(agent_stuff, env)
-        hist = History(env, envi, agent, ag)
-        trial = 0
-        while trial < n_trials-1:
-            try:
-                for trial in range(n_trials):
-                    state_before = env.state.copy()
-                    action = agent.take_action(state_before, trial, hist, env)
-                    events = env.make_events(action, hist, trial)
-                    state_after = env.state.copy()
-                    agent.learn(hist, env, events, trial, state_before, state_after)
-            except:
-                pass
-
-        # Save agent data
-        hist.save_all(data_dir, env, agent)
+        hist = History(env, agent)
+        try:
+            for trial in range(n_trials):
+                state_before = env.state.copy()
+                action = agent.take_action(state_before, trial, hist, env)
+                events = env.make_events(action, hist, trial)
+                state_after = env.state.copy()
+                agent.learn(hist, env, events, trial, state_before, state_after)
+            # Save agent data
+            print('Saving...')
+            hist.save_all(agent, env, data_dir)
+            ag += 1
+            print('Agent', ag)
+        except:
+            pass
 
 
 # Execute the function: let different agents play in different environments!
 from environment import Environment
-for envi in range(n_envs):
+for env_id in range(n_envs):
+
+    print('Environment', env_id)
+    env_stuff['id'] = env_id
     env = Environment(env_stuff, n_trials)
-    # Hierarchical - novelty
+
+    print('Hierarchical-novelty agent')
     agent_stuff['hier_level'] = len(env_stuff['n_options_per_level'])
     agent_stuff['learning_signal'] = 'novelty'
     let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir)
-    # Hierarchical - reward
+
+    print('Hierarchical-reward agent')
+    agent_stuff['hier_level'] = len(env_stuff['n_options_per_level'])
     agent_stuff['learning_signal'] = 'reward'
     let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir)
-    # Flat - rewards
+
+    print('Flat-novelty agent')
     agent_stuff['hier_level'] = 0
-    let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir)
-    # Flat - novelty
     agent_stuff['learning_signal'] = 'novelty'
+    let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir)
+
+    print('Flat-reward agent')
+    agent_stuff['hier_level'] = 0
+    agent_stuff['learning_signal'] = 'reward'
     let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir)

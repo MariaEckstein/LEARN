@@ -4,6 +4,7 @@ import itertools
 
 class Environment(object):
     def __init__(self, env_stuff, n_trials):
+        self.id = env_stuff['id']
         self.n_trials = n_trials
         self.n_basic_actions = env_stuff['n_options_per_level'][0]
         self.n_options_per_level = env_stuff['n_options_per_level']

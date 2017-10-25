@@ -50,18 +50,21 @@
   We propose a novel task paradigm, which aims to differentiate reward-learning from novelty-learning, and thereby explains how structured, goal-directed behavior can arise in complex environment that are sparse in rewards. 
 \end{abstract}
 
+
 \section{Introduction}
 
 It is desirable for a complex cognitive system, like a human, to understand its environment in a way that allows prediction of future states and events. This is because with the ability to predict the results of its own actions, an agent will be able to control its environment, creating the states and events it desires. The prediction and control of future rewards, for example, has been formalized in reinforcement learning theory (\cite{sutton_reinforcement_2017}). In this framework, an agent learns over time how much (cumulative, temporally discounted) future reward to expect, given a current state of the environment and the agent's action policy. Given the ability to predict, the agent can then maximize future rewards by adjusting its action policy.
 
 \begin{itemize}
-	\item But it's not all about rewards: We want to learn the structure of the environment (predictive model) before we know what will be rewarding.
-	\item Example: When an infant looks at a computer monitor, she probably sees a black rectangular frame, filled with colored rectangles and blinking blobs of various sizes. A computer-savy adult, on the other hand, sees a Mac or Windows machine, a bug in the code, or the need to download a new plugin. The perception of the computer monitor changes dramatically upon interaction with it. Interaction creates a structure model of the computer (Other examples: language learning, motor learning)
+	\item But it's not all about rewards: We want to learn the structure of the environment (predictive model) before we know which states and actions will be rewarding.
+	\item Example: When an infant looks at a computer monitor, she probably sees a dark frame, filled with colored rectangles and blinking, moving blobs of various sizes. A computer-savy adult, on the other hand, sees a Mac or Windows machine, a bug in the code, or the need to download a new plugin. The perception of the computer monitor changes dramatically upon interaction with it. Interaction creates a structured model of the computer.
+	\item Other examples: language learning: learn phonemes, syllables, words, 2-word sentences, 3-word sentences, whole sentences, poetry; motor learning: learn to grasp, hold, manipulate, ..., play the violin.
 	\item Indeed, psychological research of the last century has stressed again and again that humans represent their world hierarchically (Chess study - chunking; old research on expertise; TS; Anderson? Making coffee)
 	\item What would a predictive model look like that is not focused on reward? Instead of a flat table that specifies how much reward to expect from each state-action pair, we would have a collection of policies that specify how to reach various states in the environment. The agent can control the environment by selecting whatever sub-goal it likes at the moment. Once rewards are added, it can use the learned structure to maximize rewards. 
-	\item Advances in this direction: Machado, ... (cite papers that talk about exploration; sparse rewards; old 2-step paper; Schmidhuber; Deepak Pathak; ...)
-	\item The big question is now how to find valuable sub-goals. Much research, mostly about bottleneck states in the state space (Botvinick -> check in my powerpoint).
-	\item I will use intrinsic motivation instead, i.e., curiosity = explore novel / unpredicted states (Deepak Pathak's citations; Botvinick paper? -> check powerpoint)
+	\item introduce HRL
+	\item ML / RL advances in this direction: Machado, ... (cite papers that talk about exploration; sparse rewards; old 2-step paper; Schmidhuber; Deepak Pathak; the other papers in dropbox papers and in the old draft)
+	\item The big question is now how to find valuable sub-goals. Much research, mostly about bottleneck states in the state space (Botvinick -> check in my powerpoint). But this is unrealistic: an agent does not have access to all the information necessary to calculate which states are bottleneck states. 
+	\item The goal of this project is to create an algorithm with human-like behavior. Valuable sug-goals will be identified using the agent's curiosity, i.e., intrinsic motivation (Deepak Pathak's citations; Botvinick paper? -> check powerpoint)
 \end{itemize}
 
 
@@ -70,139 +73,101 @@ It is desirable for a complex cognitive system, like a human, to understand its 
 \subsection{Novelty-based hierarchical RL}
 
 \begin{itemize}
-	\item The agent explores the environment, which has no rewards, with the only goal of "understanding" it (understand = predict \& control). The environment produces events in response to the agent's actions, according to certain rules (see below).
-	\item The agent is intrinsically motivated to investigate novel events rather than re-visit familiar ones (curiosity).
-	\item Once the agent decides to investigate a specific event, its actions are guided by a specific event policy that is geared toward producing the corresponding event ("option policy" in the HRL framework). Event policies are learned over time through interaction with the environment.
+	\item The agent explores an environment with sparse rewards, with the goal of "understanding" it (understand = predict \& control). The environment produces events in response to the agent's actions, according to certain rules (see below).
+	\item The agent is intrinsically motivated to investigate novel events (curiosity). The occurrence of a novel event therefore triggers the creation of a sub-goal and the learning of a policy $\pi_e$ targeted at producing $e$. 
+	\item Once the agent decides to investigate a specific event $e$, its actions are guided by the event policy $\pi_e$ that is aimed at producing $e$ ("option policy" in HRL framework). Event policies $\pi$ are learned over time through interactions with the environment.
+	\item This means that there are two fundamental ways of selecting actions: Based on curiosity, and based on even policies.
 	\item Note: The algo is tabular: Discrete states and actions, no function approximation using ANNs.
 \end{itemize}
 
 \subsubsection{Action selection based on curiosity}
 
 \begin{itemize}
-	\item The agent's curiosity $c_e$ for a specific event $e$ is determined by the novelty $n_e$ of the event (RL-like updating). $n_e$ is a function of how often $e$ has occurred ($i_e$) and of the rate $\lambda$ at which novelty decays for a given agent. Taken together: $c_e = c_e + \alpha_c (n_e - c_e)$ and $n_e = e^{-\lambda i_e}$. Restriction: Agents can only be curious about events that have occurred at least once. 
+	\item The agent's curiosity $c_e$ for a specific event $e$ is determined by the novelty $n_e$ of the event and the agent's learning rate $\alpha$. $n_e$ is a function of $i_e$, the number of times $e$ has occurred, and the rate $\lambda$ at which novelty decays for a given agent. $n_e$ is weighted by $\gamma^{j_e}$, whereby $\gamma$ is the agent's tendency to discount future rewards, and $j_e$ is the number of time steps spent within $\pi_e$ (see below). Taken together: $c_e = c_e + \alpha_c (n_e - c_e)$ and $n_e = \gamma^{j_e} e^{-\lambda i_e}$. (Note: Agents can only be curious about events that they have seen before, i.e., that have occurred at least once.)
 	\item The agent selects events using an $\epsilon$-greedy policy: In $1-\epsilon$ \% of cases, it selects the event that it is most curious about; in $\epsilon$ \% of cases, it randomly selects among all other events.
+	\item Once the agent selects a specific event, it uses the corresponding event policy $\pi_e$ for actions selection (see below). After $\pi_e$ terminates (usually when $e$ occurs), $i_e$ is incremented by one (if $e$ occurred), $j_e$ represents the number of moves spent inside the option, and $c_e$ is updated. The subsequent event is selected based on the agent's updated curiosity. 
 \end{itemize}
 
-\subsubsection{Action selection based on event policies}
+\subsubsection{Action selection based on event policy}
 
 \begin{itemize}
-	\item Once the agent selects a specific event, it uses the corresponding event policy $\pi_e$ for actions selection. $\pi_e$ is guided by $\epsilon$-greedy action selection using a Q-value table of feature-action associations. 
-	\item All $\pi$'s are initialized uniformly over all actions. The first update happens when the event occurs for the first time.
-	\item The agent represents states in terms of features, corresponding to the history of its own actions and events (1 trial back). 
-	\item 
+	\item All option policies $\pi$ are $\epsilon$-greedy action selection policies based on event-specific Q-values. Each $\pi_e$ has a separate set of Q-values, representing the value of each state-action pair for achieving event $e$. 
+	\item States are defined in terms of previous events, encoded by features $\phi$ (one feature for each action in the event option's repertoire, signifying whether the event corresponding to this action has occurred in the previous trial).
+	\item Actions: Crucially, the agent constructs event policies hierarchically. All event policies (except the most basic ones) are based on more fundamental event options, not basic actions.
+	\item Event-specific Q-values are learned through standard TD learning on the weights $\theta$ of features $\phi$: $\theta = \theta + \alpha (r + \gamma V' - V)$, whereby $V = \theta^T \phi$ and $V' = \theta^T \phi'$.
+	\item $\pi_e$ terminates either when the target event $e$ occurs ($r=1$), or when the agent gives up without $e$ occurring ($r=0$). An agent's propensity to terminate options without achieving the sub-goal is controlled by the distraction parameter, which determines the probability of terminating an option at each step of option execution. 
+	\item Note: $\pi_e$ is updated each time $e$ occurs, even when $\pi_e$ was not in charge of action selection. This is to make it more realistic and more similar to humans, equipped with working memory.
 \end{itemize}
 
+\subsubsection{Comparison agents}
+
+We compared the novelty-based hierarchical RL agent to several other RL agents. The reward-based flat RL agent did not set sub-goals or create event policies. It selected actions based on reward, rather then novelty: $v = v + \alpha (r - v)$. Here, $r$ is the number of events occurring at a given time point. 
+
+The two remaining comparison agents are combinations of the reward-based flat RL agent and the novelty-based hierarchical RL agent: The reward-based hierarchical RL agent, and the novelty-based flat RL agent.
 
 
-- (discrete) States: defined in terms of previously encountered events and previous actions (could be extended to include other features of the environment). We use feature-based RL: each features = event last time; we limit it to 1 previous action, could be easily extended. Features are defined as the previous event on this level.
-- Agent has a limited set of basic actions that it can execute. Each action leads to a specific observable event in the environment.
-- Policy $\pi$: agent 
+\subsection{The task}
 
+We aimed to create a task that is hierarchical in nature and that can easily be presented to human participants in a laboratory setting. The goal was to reproduce the structure of more natural hierarchical learning tasks, such as the ones mentioned above. 
 
+In the task, the agent can execute a small number of basic actions and the environment responds with specific events, according to the following rules. Each basic action leads to one specific "level-0" event. The sequential execution of $n$ basic actions leads to one specific "level-1" event. Similarly, the sequential occurrence of $n$ level-1 events triggers the occurrence of one specific level-2 event, and so on. 
 
-We created and compared several different reinforcement learning agents in their performance on this task. Agents were either driven by reward or novelty (or a combination of both); and agents either chose among basic actions only (flat) or created abstract options, from which they could select in addition to the basic actions (hierarchical). Although only a subsection of agents was hierarchical, we will refer to all actions and options as options from now on.
+This structure is aimed at mirroring naturalistic phenomena, such as the combination of phonemes into syllables, syllables into words, words into sentences, etc. Note that the environment is strictly hierarchical in that events at level only depend on the events at the level right below (which depend on events at the level below, etc.).
 
-All agents used tabular methods for option-value learning and selected options based on values in an epsilon-greedy fashion, $P(a_{max}) = 1 - \epsilon$, whereby $a_{max}$ represents the action or group of actions with the currently highest state-action value and $\epsilon$ is the small probability of selecting an option with a value that is not the largest available. $P(a \neq a_{max}) = \epsilon$, whereby $a$ represents the option or group of options with non-maximum values. Probabilities were divided equally in the case of multiple optimal or non-optimal options. 
+More details about our specific implementation: $n$ is identical at all levels; the number of possible events is identical at all levels; rules are allowed to overlap, but cannot be totally identical). E.g., one rule might be [01] (event 0 followed by event 1), and another might be [21].
 
-
-\subsubsection{Flat agents}
-
-Sisyphus, the flat, reward-driven agent learned a separate option-value for each of its two options (turn-off and turn-off) for each available light. The Sisyphus agent perceived an outcome as rewarding when the number of level-0 on-lights increased, $r_t = n_t^{on} - n_{t-1}^{on}$, whereby $n^{on}$ represents the number of lights that are currently on. The agent updated its option values using classic Rescorla-Wagner updates, $v(a) = v(a) + \alpha (r - v(a))$, with learning rate $\alpha$.
-
-The flat, novelty-driven agent was similar to Sisyphus expect that it updated option-values based on novelty $n$ rather than reward, $v(a) = v(a) + \alpha (n - v(a))$. Novelty was calculated as $n = \frac{1}{count}$, where $count$ keeps track of the number of times each event, i.e., lights turning on and off, has occurred. 
-
-The combined reward-novelty agent used a linear combination of the novelty and reward signals to update option-values, $v(a) = v(a) + \alpha (r + n - v(a))$. 
-
-
-\subsubsection{Hierarchical agents}
-
-Socrates, the hierarchical, novelty-driven agent, used novelty to guide option creation and the calculation of option-values. Novelty was different in the hierarchical agent compared to the flat agents because it also encompassed higher-level lights. (To facilitate comparison, we also constructed a flat agent that perceived higher-level novelty, with similar results.)
-
-The Socrates agent kept a count for each event (level-0 lights and higher-level lights) to determine its novelty, similar to the flat novelty-seeking agent. Option values were updated based on novelty, like above, with the addition of temporal discounting to account for the delay induced by the execution of an option. The Socrates agent also created a new option each time it perceived a novel event, i.e., $n \geq 1$. An option's initiation set consisted of the whole state space, i.e., each option could be initiated at all times. An option terminated when the agent was successful in reinstating the event for which the option had been created, i.e., when the same higher-level light turned on again. Options also terminated with a small percentage at each time step, such that unsuccessful options did not continue forever. 
-
-Once created, options could be reused in higher-level options. This means that options can be very efficient, pointing to just $n_{tuple}$ options (or actions) at the level directly below.
-
-Within-option policies were learned in the following way: Each option was associated with a separate option-value table. Values in this table reflected the expectation of reaching the option goal upon selecting each option. When an option was created, the values of all available options were initialized at 0, expect for the option executed immediately prior to the formation of the option, which was set to 1. Subsequently, whenever an option's goal was reached, i.e., its corresponding higher-level light turned on, the value of the option executed immediately before was set to 1. In this way, option policies were updated whether or not an option was currently in charge of option selection. 
-
-Hierarchical agents selected among options. When a 1-step option (basic action) was selected, it was executed and its value updated according the equations given above. When a multi-step option was selected, within-option values were used to guide action selection until the option terminated. If the option terminated successfully (sub-goal reached), it's value was updated according to the novelty of the event, plus the novelty accrued during option execution. If the option terminated unsuccessfully, it's value was updated according to only novelty accrued during execution. 
-
-The hierarchical, reward-seeking agent was similar to the Socrates agent except that it updated values according to reward, rather than novelty.
-
-
-\subsection{Environment / Task}
-
-We created a task with both a concrete quantifiable goal, which invited the use of rewards and exploitation, and a complex, hard-to-predict structure, which invited the use of novelty and exploration. The task consisted of an array of turned-off lights, with the goal of lighting them all up. The agent was equipped with the two actions turn-on and turn-off, with the condition that only currently-off lights could be turned on and only currently-on lights could be turned off.
-
-Unbeknownst to the agent, these basic or "0-level" lights were organized in groups of $n_{tuple}$ lights, e.g., groups of three in Figure \ref{TaskFigure}, and followed the subsequent rules. When the last light of a group was turned on, such that all lights of a group were lit-up at the same time, the environment responded with a novel event (such as a light of a different color), and also turned all lights of the group off again. We refer to the novel event as a first-level light. First-level lights were also organized into groups of $n_{tuple}$ lights. First-level lights produced a second-level light when turned-on at the same time and then turned off again. This same structure continued from one level to the next, making lights of higher levels increasingly "costly" to switch on. The number of levels was determined by the number of lights at the base level and by the number of lights per group. Higher-level lights could not be turned off directly; they only turned off when all lights in the same group were turned on, such that the whole group switched off.
-
-Once a higher-level light was on, the corresponding lower-level lights would not extinguish any more if switched on at the same time. Therefore, the only way to turn on all the lights in the task was to first switch on the one highest-level light, than the $n_{tuple}$ lights of the level below, the $n_{tuple} ^ 2$ lights below this, and so on, until finally the all level-0 lights could be switched on. Switching on each higher-level light thereby required switching on several level-0 lights, some of them multiple times. Figure \ref{TaskFigure} shows an example illustration of the task.
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=0.5\linewidth]{NIPSfigures/Task.png}
-  \caption{Example illustration of the task. At the current state, three level-0 lights (blue) are on, all level-1 lights are off (invisible) and all three level-2 lights are on, meaning that they will be replaced with a single level-3 light in this turn. The agent's goal is to turn on "all the lights".}
-  \label{TaskFigure}
-\end{figure}
-
+Example: [Table in the same shape as the state / value tables; each cell contains two numbers that specify the two events that need to occur at the level below in order to produce this event. Shows the rules of the example below.]
 
 \section{Results}
 
-\subsection{Flat agents}
+All results shown for agents with $\alpha = 0.3$, $\lambda = 0.3$, $\gamma = 0.7$, $\epsilon = 0.2$, $distraction = 0.1$. All environments had 3 basic actions, and 3 events at each level of the hierarchy. Each event was triggered by the sequential occurrence of 2 specific events at the level below. The environment had 6 levels of hierarchy in an effort to max out the agents. 
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{NIPSfigures/NLights.png}
-  \caption{Comparison of the four flat agents in terms of number of lights turned on. The agents played games with 81 lights, which were organized into groups of 3. Shown are the means of 50 agents of each category. All agents had a learning rate of 75\% and epsilon of 5\%. Legend: "Novelty hier." refers to the flat agent that perceives basic- and higher-level lights; "Novelty flat": flat agent, flat novelty; "Reward flat": flat agent, driven by rewards; "Novelty \& reward flat": flat agent, driven by the sum of novelty and reward.}
-  \label{ResultsFlatFigure}
-\end{figure}
+\subsection{Behavior of the novelty-based hierarchical agent}
 
-As expected, neither of the flat agents were able to win a game of 81 lights with 3 lights per group, i.e., the agents did not succeed in turning on all 81 lights within a reasonable time frame (see Figure \ref{ResultsFlatFigure}). Reward-driven agents surpassed novelty-driven agents. 
+\begin{itemize}
+	\item Novelty over time: One plot for each level, showing how novelty decreases over time; will be the average of 5 agents who played the same environment [the environment with the rules above].
+	\item Final option policies: Final Q-value tables for a few options (one at each level?), averaged over the 5 agents.
+	\item Learning policies over time: Change in RMSE over trials, plotted separately for each level (averaging RMSE within levels)
+\end{itemize}
 
-Reward-driven agents quickly increased the number of turned-on lights in this game. These agent learned that the turn-on action resulted in rewards for most of the lights, whereas the turn-off action resulted in punishment. The agents therefore tended to repeat on-actions when they were available, but avoided off-actions, thereby increasing the overall number of on-lights. Within 200 trials, the reward-agents had turned on an average of 54 lights, exactly two-thirds of the 81 available lights. The number of turned-on lights then remained relatively stable for more than 500 trials. The reason for this is that the agents had received negative rewards for one out of three turn-on action (whenever a higher-level light turned on and three level-0 lights turned off), resulting in a large negative reward of -2 for one specific turn-on action. The agents therefore avoided these turn-on actions and would even prefer turning off lights (expected reward of -1) to turning on these lights again (expected reward of -2). The reason that the number of lights increased slowly thereafter is the noise in agents' epsilon-greedy selection rule. 
+\subsection{Comparison of the novelty-based hierarchical agent and other agents}
 
-Flat novelty-driven agents increased the number of turned-on lights much more slowly than reward-agents. The novelty-driven agents explored actions randomly, being rewarded with equal novelty for each action irrespective of whether it turns lights on or off. Flat novelty-agents "wanted" to repeat newly-discovered actions as soon as possible, having assigned high novelty values to it after their first discovery. But the environment does not allow agents to turn on lights that are already on, such that they need to wait until a group of lights turns off in junction, such that it can turn them all on again, or until it discovers the off-action that corresponds to a previously-performed on-action. At this point, both on- and off-actions have high values and agents perform them in turn for many trials, continuously reducing both actions' novelty. With the next non-greedy action selection, the agent has a new chance of discovering an action that is the counterpart of an already-discovered action; if it is found, the agent will execute these two actions in turn, and so on, until eventually, all actions have been discovered. Resembling a random process, the agent's behavior pushed the number of turned-on lights slowly but consistently toward its expected value, the mean of 40.5 lights. There are two reasons this number was not reached: First, the environment turned groups of lights off according to the rules, reducing the number of on-lights; and second, the agent never managed to explore all actions because it spent too much time playing with pairs of corresponding actions. 
+\begin{itemize}
+	\item Number of events per trial over time
+	\item Number of discovered events over time
+	\item Number of perseverative actions over time (perseveration = same action at least twice in a row)
+	\item Size of "DA bursts" over time ("DA burst" = RPE at either novelty or theta level)
+	\item Number of times actions are executed, by number of times an action is part of a higher-level event (0, 1, or 2)
+\end{itemize}
 
-The agent that combines novelty and reward resembled the pure reward agent. 
+\section{Conclusion}
 
-Taken together, both kinds of flat agent showed behaviors that were promising for learning in this task, but not sufficient. The reward-agent misattributed a group of lights turning off to one particular action, and therefore stopped exploring these actions further. The novelty-agent was not motivated to turn on lights, rather than turning the off, and therefore just "played" with the lights, reducing novelty over time. Both agents also lacked the capability of understanding the underlying mechanism of the game, being limited to learning about single actions rather than more complex structures. 
+We have shown that a novelty-based hierarchical RL agent
+\begin{itemize}
+	\item explores an environment more thoroughly than a flat agent (discovers more events)
+	\item selects actions in a more balanced way (fewer perseverations)
+	\item "gets bored" over time, especially  for very simple tasks (decreasing DA bursts; decrease in novelty scales with level)
+\end{itemize}
 
+This makes sense and might be similar to humans.
 
-\subsection{Hierarchical agents}
+In our notion, the agent learns to "understand" its environment. It is able to predict events and control them according to its own wishes.
 
-We expect that hierarchical agents will remedy the shortcomings of the flat agents. In specific, we expect that agents that are purely driven by novelty will succeed in this task, even without a notion reward. The reason for this is that in hierarchical agents, novel events will trigger the creation of an option with the sub-goal of achieving the same event again. New options will be initialized with high values, corresponding to the initial high novelty of the event. Agents will therefore be motivated to (1) learn how to achieve the same outcome again and (2) to achieve the same outcome again. By repeating to turn on higher-level lights, agents will unlock higher levels, experience more novelty, create more options (which can be based on options for lower levels), unlock more levels, and so on, until all lights are finally turned on. We therefore expect that hierarchical, novelty-driven agents can win this game, even though they do not possess a notion of reward.
+This is interesting because usually people think about prediction in terms of model-based (versus model-free) methods, rather than hierarchical methods. But creating hierarchy in this way really is a way to achieve prediction. By creating an event option policy, the agent learns to predict the event. By selecting the option policy, it controls the environment.
 
+"Embodiment" is really important, the possibility of the agent to interact with its environment. Because understanding implies control. Kids love to experiment. Cite stuff on how experimentation helps kids learn? (Fei Shu, Tania Lombrozo?, Alison Gopnik?; active learning literature)
 
-\subsection{Motivation}
+\subsection{Future directions}
 
-We lastly compared the values that each kind of agent assigned to the different actions. As expected, the reward agent learned to assign positive values to on-actions and negative values to off-actions. Average values for on-actions decreased suddenly after 150 trials as re-trying actions of initial high values led to the unexpected turning off of lights. Values increased slowly thereafter, as high-level events became more and more sparse. The values of off-actions decreased steadily as the agent learned that these always lead to negative rewards.
+\begin{itemize}
+	\item Algo itself could be extended: function approximation (neural network) rather than tabular RL; model curiosity in a more sophisticated way: based on prediction rather than event count (Deepak Pathak's citations)
+	\item Bring the task to humans and compare
+	\item extract RL features and look for them in the brain
+	\item Check if we can reproduce specific phenomena related to hierarchical learning. First, does the agent have a learning advantage when it is allowed to explore the environment first (without rewards), before asked to exploit it (add rewards, see how long it takes the agent to find the best strategy, compared to a flat or non-trained agent). Second, is there interference when the agent is trained in one environment and then posed into an environment whose options are just slightly different (reason why second-language speakers never get rid of their accent: it's situated at a low level in the language hierarchy).
+	\item Check if there is more on the powerpoint.
+\end{itemize}
 
-Surprisingly, the novelty agent assigned larger average values to on- than off-actions. The reason for this is that more on- than off-actions show values of 0.75 at the end of the game, revealing that they were discovered once, but that the corresponding off-action was never discovered. Most other actions had either very small values (because they were part of a "game", in which the agent turned a single light on and off repeatedly), or the initial value of 0 (because they were never tried). The reason that more on- than off-action had values of 0.75 is that the mechanics of the game itself switching off some lights, leaving the agent with more options among on- than off-actions, such that many on-action were explored whose off-counterpart remained unexplored. The average value of on-actions first increased steadily, as more and more actions were discovered. After a turning point around 1200 trials, the average value slowly decreased because all actions lost their novelty as the agent circled through them in the search of the most novel one.
-
-Importantly, the average values of all lights were strictly positive for the novelty-agent, but negative for the reward-agent. In other words, the novelty agent showed what would be called approach behavior in psychology, whereas the reward-agent showed avoidance behavior. 
-
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{NIPSfigures/VFlat.png}
-  \label{ResultsFlat}
-  \caption{Comparison of the flat agents in terms of action-values for the on- and off-actions. Same games as before.}
-\end{figure}
-
-For the hierarchical novelty-driven agent, values will be overall positive like for the flat novelty-driven agent. We expect that this agent will be able to avoid the "play"-circle of turning the same light on and off repeatedly through the use options. The increased use of options should lead to broader exploration.
-
-
-\section{Conclustion}
-
-We have introduced a novel task paradigm that is suited to pit exploratory and exploitatory behavior against each other, shedding some light on novel debates arising between classical reinforcement learning based on reward, and novel approaches that have highlighted the power of novelty alone as a driving force of learning. We have shown that reward alone is better suited to motivate flat agents to perform well in a task, but that reward-motivated flat agents do not reach the final goal of the task. (None of the 200 simulated flat agents actually won the game, i.e., managed to turn on all the lights, within 2500 trials.)
-
-We have also highlighted differences in the behavior of reward- versus novelty-driven agents. Most notably, reward-driven agents were motivated to avoid expected negative consequences, whereas novelty-driven agents were motivated to seek expected positive outcomes. This difference might have implications for other tasks and might even help elucidate psychological phenomena such as learned helplessness (Sisyphus agent) and optimism (Novelty-seeking agent). 
-
-We have proposed the abstract framework of a game-like task, but think that the proposed algorithm of the Socrates agent might be meaningful for a wide range of psychological phenomena. The idea of combining novelty-seeking with hierarchical learning might be able to shed some light on areas as different as motor learning, language learning, and concept formation. In each of these, behavior starts from simple "level-0" actions, e.g., phonemes in the realm of language or simplest body movements in the realm of motor learning. In both cases, learners, usually infants, are motivated to explore the outcomes of their actions, thereby reducing uncertainty over time. At the same time, the formation of hierarchical actions. 
-
-Several extensions are possible to the current framework. It would be worth exploring how results would differ if the same basic underlay all higher-level events. This scenario might be closer to many real-world learning situations, such as motor and language learning. Another place for exploration would be order. In the given example, order was irrelevant for the creation of higher-level events, but order is indeed crucial in many situations. It would also be worth exploring what would happen if there were only on-, but no off-actions, which would come closer the notion of actions in the real world, in which "un-actions" do not exist. 
-
-This paradigm could also be tested in human, such that learning could be characterized in terms of goal and structure.
-
-Taken together, by creating the hierarchical novelty-seeking Socrates agent, we hope to show that learning of meaningful behavior can be driven by learning itself, rather than external rewards. In this framework, the learner produces the crucial learning signals itself, by selecting actions that reduce novelty and surprise over time. In other words, this learner balances the search for novelty with reducing prediction errors. It explores the environment in a systematic way, forms "hypotheses" and conducts "experiments", in order to learn more. 
+Taken together, by creating the hierarchical novelty-seeking agent, we hope to show that learning of meaningful behavior can be driven by learning itself, rather than external rewards. In this framework, the learner produces the crucial learning signals itself, by selecting actions that over time reduce novelty. In other words, this learner balances the search for novelty with reducing prediction errors. It explores the environment in a systematic way, forms "hypotheses" and conducts "experiments", in order to learn more. 
 
 \section*{References}
 

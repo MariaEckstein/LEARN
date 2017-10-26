@@ -31,10 +31,10 @@ class V(object):
         action_level = option[0] - 1
         phi = state[action_level]
         thetas = theta.get_option_thetas(option)
-        action_values = np.dot(thetas, phi)  # calculate values from thetas
-        values = np.full(self.get().shape, np.nan)  # initialize value array
+        action_values = np.dot(thetas, phi)
+        values = np.full(self.get().shape, np.nan)
         values[action_level, :] = action_values
-        return values
+        return values.copy()
 
     def get(self):
         return self.v.copy()

@@ -1,10 +1,10 @@
 # Define variables
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/'
-n_trials = 20
-n_agents = 1
-n_envs = 1
+n_trials = 300
+n_agents = 10
+n_envs = 10
 env_stuff = {'option_length': 2,
-             'n_options_per_level': [3, 3, 3, 3, 3, 3]}
+             'n_options_per_level': [5, 5, 5, 5, 5]}
 agent_stuff = {'hier_level': len(env_stuff['n_options_per_level']),  # flat (0), hierarchical (len(env_stuff['n_options_per_level'])), in-between?
                'learning_signal': 'novelty',  # novelty or reward
                'alpha': 0.3,  # learning rate
@@ -12,7 +12,7 @@ agent_stuff = {'hier_level': len(env_stuff['n_options_per_level']),  # flat (0),
                'n_lambda': 0.3,  # how fast does novelty decay?
                'gamma': 0.7,  # how much does the agent care about the future?
                'epsilon': 0.2,  # what percentage of actions is selected randomly?
-               'distraction': 0.2}  # probability of quitting an option at each step
+               'distraction': 0}  # probability of quitting an option at each step
 
 
 # Define agent play as a function

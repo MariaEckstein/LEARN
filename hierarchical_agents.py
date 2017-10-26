@@ -72,14 +72,11 @@ class Agent(object):
     def once_per_trial(self, trial, hist):
         hist.n[trial] = self.n.copy()
         hist.v[trial] = self.v.get()
-        # hist.e[trial] = self.theta.e.copy()
         if self.hier_level > 0:
             hist.update_option_history(self, trial)
 
     # Learn and helpers
     def learn(self, hist, env, events, trial, state_before, state_after):
-        # if self.hier_level > 0:
-        #     self.theta.update_e(self, events, hist, env)
         self.__learn_from_events(hist, env, trial, events, state_before, state_after)  # count events, initialize new options (v & theta)
         self.__learn_rest(hist, trial, events, state_before, state_after)  # update theta of ongoing options, v of terminated
 

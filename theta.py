@@ -15,12 +15,12 @@ class Theta(object):
         caller_level = event[0] + 1
         # Fill up theta table of newly-encountered option
         if action_level >= 0:  # only for options (i.e., action level exists)
-            n_actions = env.n_options_per_level[action_level]
+            n_features = env.n_options_per_level[action_level]
             discovered_actions = np.argwhere(~np.isnan(v[action_level]))
             option_index = self.option_coord_to_index(event)
-            self.theta[option_index, discovered_actions, 0:n_actions] = self.initial_theta
+            self.theta[option_index, discovered_actions, 0:n_features] = self.initial_theta
         # Add newly-encountered option to all caller options that could use it
-        if option_level > 1 and caller_level < env.n_levels:  # only for options based on options
+        if option_level > 0 and caller_level < env.n_levels:  # only for options based on options
             caller_options = np.argwhere(~np.isnan(v[caller_level]))
             if len(caller_options) > 0:
                 for caller in caller_options:
@@ -41,6 +41,8 @@ class Theta(object):
         else:
             v_after = 0
         delta = goal_achieved + agent.gamma * v_after - v_before
+        if np.isnan(delta):
+            delta = 0
         self.theta[self.option_coord_to_index(current_option), action, state_before[action_level]] += agent.alpha * delta
 
     def get_option_thetas(self, option, action=None):

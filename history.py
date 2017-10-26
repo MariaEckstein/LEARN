@@ -59,8 +59,8 @@ class History(object):
         op = 0
         for level in range(1, env.n_levels):
             trial_rules = pd.DataFrame(env.rules[level, :, :], columns=colnames)
-            trial_rules['option'] = range(op, op + env.option_length + 1)
-            op += env.option_length + 1
+            trial_rules['option'] = range(op, op + env.n_options_per_level[level])
+            op += env.n_options_per_level[level]
             trial_rules['level'] = level
             rules = pd.concat([rules, trial_rules])
         rules.to_csv(self.data_path + "/rules_e" + str(self.env_id) + ".csv")

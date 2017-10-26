@@ -104,8 +104,11 @@ if (analyze_my_algo) {
   gg_summary_value$data = algo_v
   
   if (gg_save) {
-    ggsave(file.path(sum_plot_dir, "gg_summary_value.png"), gg_summary_value, width = 10, height = 2)
-    ggsave(file.path(sum_plot_dir, "gg_summary_novelty.png"), gg_summary_novelty, width = 10, height = 2)
+    identifier = paste(which_data$n_options_per_level, "_e", which_data$env_id, ".png", sep = "")
+    file_name = paste("gg_summary_value_", identifier, sep = "")
+    ggsave(file.path(sum_plot_dir, file_name), gg_summary_value, width = 10, height = 2)
+    file_name = paste("gg_summary_novelty_", identifier, sep = "")
+    ggsave(file.path(sum_plot_dir, file_name), gg_summary_novelty, width = 10, height = 2)
   }
   
   # Final option policies
@@ -124,7 +127,8 @@ if (analyze_my_algo) {
                ncol = 3)
   
   if (gg_save) {
-    ggsave(file.path(sum_plot_dir, "gg_theta.png"), gg_theta, width = 3, height = 5)
+    file_name = paste("gg_theta_", identifier, sep = "")
+    ggsave(file.path(sum_plot_dir, file_name), gg_theta, width = 3, height = 5)
   }
   
   # RMSE of option policies}

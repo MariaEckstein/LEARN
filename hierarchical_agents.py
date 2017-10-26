@@ -89,8 +89,8 @@ class Agent(object):
                 self.theta.create_option(event, env, self.v.get())
                 self.v.update(self, event, 1, events)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
-                hist.update_theta_history(self, event, trial)
                 self.theta.update(self, hist, event, 1, state_before, state_after)  # update in-option policy
+            hist.update_theta_history(self, event, trial)
 
     def __learn_rest(self, hist, trial, events, state_before, state_after):
         current_events = np.argwhere(events)

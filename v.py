@@ -25,13 +25,16 @@ class V(object):
         elif agent.learning_signal == 'reward':
             reward_signal = np.sum(events)
         delta = goal_achieved * reward_signal - self.v[option[0], option[1]]
+        if np.isnan(delta):
+            delta = 0
         self.v[option[0], option[1]] += agent.alpha * delta
 
     def get_option_values(self, state, option, theta):
         action_level = option[0] - 1
         phi = state[action_level]
         thetas = theta.get_option_thetas(option)
-        action_values = np.dot(thetas, phi)
+        action_values = np.nansum(thetas * phi, 1)  # same as np.dot(thetas, phi) but ignores nan
+        action_values[action_values == 0] = np.nan  # np.nansum replaces actual nans by 0
         values = np.full(self.get().shape, np.nan)
         values[action_level, :] = action_values
         return values.copy()

@@ -25,7 +25,7 @@ plot_each_trial = function(all_dat, gg_save, plot_dir) {
       facet_wrap(~ step)
     
     # Values in each trial
-    upper_limit = ifelse(learning_signal == "novelty", 1, n_levels) 
+    upper_limit = ifelse(learning_signal == "novelty", 1, max(all_dat$v_hist$level)) 
     gg_value = gg_event
     gg_value$data = subset(all_dat$v_hist, trial == tr)
     gg_value = gg_value +
@@ -93,12 +93,12 @@ plot_each_trial = function(all_dat, gg_save, plot_dir) {
   
   # Options, selected trials
   gg_option_multi = gg_option
-  gg_option_multi$data = subset(all_dat$option_history, trial < 10 | trial > (max(trial) - 10))
+  gg_option_multi$data = subset(all_dat$option_hist, trial < 10 | trial > (max(trial) - 10))
   gg_option_multi = gg_option_multi + facet_wrap(~ trial)
   
   # Values, selected trials
   gg_value_multi = gg_value
-  gg_value_multi$data = subset(all_dat$v_history, trial < 10 | trial > (max(trial) - 10))
+  gg_value_multi$data = subset(all_dat$v_hist, trial < 10 | trial > (max(trial) - 10))
   gg_value_multi = gg_value_multi + facet_wrap(~ trial)
   
   if (gg_save) {
@@ -108,19 +108,19 @@ plot_each_trial = function(all_dat, gg_save, plot_dir) {
   }
   
   # Plot novelty values over time
-  gg_summary_novelty = ggplot(all_dat$v_history, aes(trial, value, color = factor(action), group = level)) +
+  gg_summary_novelty = ggplot(all_dat$v_hist, aes(trial, value, color = factor(action), group = level)) +
     stat_summary(fun.data = "mean_se", geom = "pointrange") +
     stat_summary(fun.y = "mean", geom = "line", color = "black") +
     geom_line(aes(group = action)) +
     coord_cartesian(y=c(0, upper_limit), x=c(0, 350)) +
     theme(legend.position = "none") +
-    facet_grid(~ factor(level, levels = unique(all_dat$v_history$level), labels = paste("Level", unique(all_dat$v_history$level))))
+    facet_grid(~ factor(level, levels = unique(all_dat$v_hist$level), labels = paste("Level", unique(all_dat$v_hist$level))))
   if (gg_save) {
     ggsave(file.path(plot_dir, "gg_summary_novelty.png"), gg_summary_novelty, width = 6, height = 3)
   }
   
   # Plot option features over time
-  sum_thet_dat = subset(all_dat$theta_history, option %in% 0:5 & feature %in% 0:5)
+  sum_thet_dat = subset(all_dat$theta_hist, option %in% 0:5 & feature %in% 0:5)
   gg_summary_theta = ggplot(sum_thet_dat, aes(trial, value, color = factor(action))) +
     geom_point() +
     labs(color="Action") +
@@ -139,10 +139,10 @@ plot_each_trial = function(all_dat, gg_save, plot_dir) {
   }
   
   # Plot option values over time}
-  th0 = subset(all_dat$theta_history, option == 0 & feature %in% 0:7 & action %in% 0:7)
+  th0 = subset(all_dat$theta_hist, option == 0 & feature %in% 0:7 & action %in% 0:7)
   
-  tiles_opt = expand.grid(feature = 0:max(all_dat$theta_history$feature), option = 0:max(all_dat$theta_history$option), action = max(all_dat$theta_history$action))
-  tiles = subset(all_dat$theta_history, trial == max(th0$trial))  # & option %in% 0:2 & action %in% 0:9
+  tiles_opt = expand.grid(feature = 0:max(all_dat$theta_hist$feature), option = 0:max(all_dat$theta_hist$option), action = max(all_dat$theta_hist$action))
+  tiles = subset(all_dat$theta_hist, trial == max(th0$trial))  # & option %in% 0:2 & action %in% 0:9
   gg_final_policies = ggplot(tiles, aes(feature, factor(action))) +
     geom_tile(aes(fill = value), colour = "white") +
     scale_fill_gradient(low = "white", high = "steelblue") +

@@ -62,7 +62,7 @@ for (env_id in seq(0, 9)) {
 }
 ```
 
-```{r Analyze my HN agent in detail}
+```{r Analyze my HN agent in detail in one specific environment}
 # Read in data
 
 if (analyze_my_algo) {
@@ -74,69 +74,67 @@ if (analyze_my_algo) {
   
   which_data$hier = "hierarchical"
   which_data$learning_signal = "novelty"
+  which_data$env_id = 2
   
   for (agent_id in seq(0, 10)) {
-    for (env_id in seq(0, 9)) {
       
-      # Define data to be loaded
-      which_data$agent_id = agent_id
-      which_data$env_id = env_id
-      
-      # Load data and attach to dataframe containing all data
-      all_dat = read_in_data(base_dir, which_data)
-      
-      algo_n = rbind(algo_n, all_dat$n_hist)
-      algo_v = rbind(algo_v, all_dat$v_hist)
-      algo_theta = rbind(algo_theta, all_dat$theta_hist)
-      rules = rbind(rules, all_dat$rules)
-    }
+    # Define data to be loaded
+    which_data$agent_id = agent_id
+    
+    # Load data and attach to dataframe containing all data
+    all_dat = read_in_data(base_dir, which_data)
+    
+    algo_n = rbind(algo_n, all_dat$n_hist)
+    algo_v = rbind(algo_v, all_dat$v_hist)
+    algo_theta = rbind(algo_theta, all_dat$theta_hist)
+    rules = rbind(rules, all_dat$rules)
   }
+
+  # Show rules of selected env
+  rules
+  
+  # Show novelty over time
+  gg_summary_novelty = ggplot(algo_n, aes(trial, value, group = factor(action), color = factor(action), fill = factor(action))) +
+    stat_summary(fun.data = "mean_se", geom = "smooth") +
+    labs(x = "Trial", y = "Novelty") +
+    facet_grid(~ factor(level, levels = unique(algo_n$level), labels = paste("Level", unique(algo_n$level))))
+  
+  # Show value over time
+  gg_summary_value = gg_summary_novelty + labs(y = "Curiosity")
+  gg_summary_value$data = algo_v
+  
+  if (gg_save) {
+    ggsave(file.path(sum_plot_dir, "gg_summary_value.png"), gg_summary_value, width = 10, height = 2)
+    ggsave(file.path(sum_plot_dir, "gg_summary_novelty.png"), gg_summary_novelty, width = 10, height = 2)
+  }
+  
+  # Final option policies
+  algo_theta_sum = ddply(subset(algo_theta, trial == max(algo_theta$trial)),
+                         .(option, action, feature),
+                         summarize,
+                         value = mean(value, na.rm = T))
+  
+  gg_theta = ggplot(algo_theta_sum, aes(action, feature)) +
+    geom_tile(aes(fill = value), color = "white") +
+    geom_text(aes(label = round(value, 2)), size = 1.5) +
+    scale_fill_gradient(low = "white", high = "red", limits = c(min(algo_theta$value), max(algo_theta$value))) +
+    labs(x = "Action ID", y = "Level") +
+    theme(legend.position = "none") +
+    facet_wrap(~ factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))),
+               ncol = 3)
+  
+  if (gg_save) {
+    ggsave(file.path(sum_plot_dir, "gg_theta.png"), gg_theta, width = 3, height = 5)
+  }
+  
+  # RMSE of option policies}
+  # Get optimal policies
+  # Need rules and gamma
+  
+  # Subtract agent's values from optimal values in each trial
+  
+  # Plto
 }
-
-# Show rules of selected env
-rules
-
-# Show novelty over time
-gg_summary_novelty = ggplot(subset(algo_n), aes(trial, value, group = factor(action), color = factor(action), fill = factor(action))) +#, env_id == 4
-  stat_summary(fun.data = "mean_se", geom = "smooth") +
-  labs(x = "Trial", y = "Novelty") +
-  facet_grid(~ factor(level, levels = unique(algo_n$level), labels = paste("Level", unique(algo_n$level))))
-
-# Show value over time
-gg_summary_value = gg_summary_novelty + labs(y = "Curiosity")
-gg_summary_value$data = subset(algo_v)#, env_id == 4
-
-if (gg_save) {
-  ggsave(file.path(sum_plot_dir, "gg_summary_value.png"), gg_summary_value, width = 10, height = 2)
-  ggsave(file.path(sum_plot_dir, "gg_summary_novelty.png"), gg_summary_novelty, width = 10, height = 2)
-}
-
-# Final option policies
-algo_theta_sum = ddply(subset(algo_theta, trial == max(algo_theta$trial)),# & env_id == 4,
-                       .(option, action, feature),
-                       summarize,
-                       value = mean(value, na.rm = T))
-
-gg_theta = ggplot(algo_theta_sum, aes(action, feature)) +
-  geom_tile(aes(fill = value), color = "white") +
-  geom_text(aes(label = round(value, 2)), size = 1.5) +
-  scale_fill_gradient(low = "white", high = "red", limits = c(min(algo_theta$value), max(algo_theta$value))) +
-  labs(x = "Action ID", y = "Level") +
-  theme(legend.position = "none") +
-  facet_wrap(~ factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))),
-             ncol = 3)
-
-if (gg_save) {
-  ggsave(file.path(sum_plot_dir, "gg_theta.png"), gg_theta, width = 3, height = 5)
-}
-
-# RMSE of option policies}
-# Get optimal policies
-# Need rules and gamma
-
-# Subtract agent's values from optimal values in each trial
-
-# Plto
 ```
 
 # Compare agents

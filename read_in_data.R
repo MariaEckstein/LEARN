@@ -4,18 +4,7 @@ read_in_data = function(base_dir, which_data) {
   algo_dat = list()
   
   # Get data directory
-  data_dir = paste(base_dir,
-                   "/n_options_per_level_", which_data$n_options_per_level,
-                   "/option_length_", which_data$option_length,
-                   "/", which_data$hier,
-                   "/", which_data$learning_signal,
-                   "/alpha_", which_data$alpha,
-                   "/e_lambda_", which_data$e_lambda,
-                   "/n_lambda_", which_data$n_lambda,
-                   "/gamma_", which_data$gamma,
-                   "/epsilon_", which_data$epsilon,
-                   "/distraction_", which_data$distraction,
-                   sep = "")
+  data_dir = get_dir(base_dir, which_data)$data_dir
   file_id = paste("e", which_data$env_id, "_a", which_data$agent_id, sep = "")
   
   # Rules
@@ -24,7 +13,7 @@ read_in_data = function(base_dir, which_data) {
   rules$X = NULL
   
   # Event history
-  file_name = paste("event_history_long_", file_id, ".csv", sep = "")
+  file_name = paste("event_hist_long_", file_id, ".csv", sep = "")
   event_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   event_hist$X = NULL
   event_hist = with(event_hist, event_hist[order(trial, level, action),])
@@ -43,16 +32,17 @@ read_in_data = function(base_dir, which_data) {
     }
   }
   event_hist$n_disc_events = rowSums(event_hist[col_names])
+  event_hist[col_names] = NULL
   
   # Novelty history
-  file_name = paste("n_history_long_", file_id, ".csv", sep = "")
+  file_name = paste("n_hist_long_", file_id, ".csv", sep = "")
   n_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   n_hist$X = NULL
   n_hist$n = n_hist$value
   n_hist$value = exp(-as.numeric(which_data$n_lambda) * n_hist$value)
   
   # Value history
-  file_name = paste("v_history_long_", file_id, ".csv", sep = "")
+  file_name = paste("v_hist_long_", file_id, ".csv", sep = "")
   v_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   v_hist$X = NULL
   if (which_data$hier == "flat") {
@@ -61,7 +51,7 @@ read_in_data = function(base_dir, which_data) {
   v_hist = with(v_hist, v_hist[order(trial, level, action),])
   
   # State history
-  file_name = paste("state_history_long_", file_id, ".csv", sep = "")
+  file_name = paste("state_hist_long_", file_id, ".csv", sep = "")
   state_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   state_hist$X = NULL
   state_hist = with(state_hist, state_hist[order(trial, level, action),])
@@ -76,13 +66,17 @@ read_in_data = function(base_dir, which_data) {
   theta_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   theta_hist$X = NULL
   theta_hist = subset(theta_hist, value != 0)
-  
-  # Elig. trace history
-  # file_name = paste("e_history_long_", file_id, ".csv", sep = "")
-  # e_hist = read.csv(file = file.path(data_dir, file_name, header = T)
-  # e_hist$X = NULL
+  # Add levels column
+  theta_hist$level = 0
+  for (level in seq(which_data$n_levels)) {
+    level_actions = seq(which_data$n_levels * level, which_data$n_levels * (level+1) - 1)
+    theta_hist$level[theta_hist$option %in% level_actions] = level
+  }
   
   # Add ids to data
+  rules$hier = which_data$hier
+  rules$learning_signal = which_data$learning_signal
+  rules$env_id = which_data$env_id
   n_hist$hier = which_data$hier
   n_hist$learning_signal = which_data$learning_signal
   n_hist$agent_id = which_data$agent_id

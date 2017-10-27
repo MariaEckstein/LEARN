@@ -46,7 +46,6 @@ class History(object):
                            "/" + hier +\
                            "/" + agent.learning_signal +\
                            "/alpha_" + str(agent.alpha) +\
-                           "/e_lambda_" + str(agent.e_lambda) +\
                            "/n_lambda_" + str(agent.n_lambda) +\
                            "/gamma_" + str(agent.gamma) +\
                            "/epsilon_" + str(agent.epsilon) +\

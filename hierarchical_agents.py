@@ -4,6 +4,7 @@ from v import V
 
 
 # TDs:
+# - check if i'm counting the number of steps right (steps_till_event_reached) -> it's weird that level-0 actions have lower curiosity than higher-level actions
 # - fix history -> make nicer, more general functions, avoid repeating myself
 # - save rules
 # - bug in line 107 (hierarchical_agents.py)
@@ -26,7 +27,6 @@ class Agent(object):
         # Agent's RL features
         self.alpha = agent_stuff['alpha']  # learning rate
         self.epsilon = agent_stuff['epsilon']  # greediness
-        self.e_lambda = agent_stuff['e_lambda']  # decay rate of elig. trace
         self.n_lambda = agent_stuff['n_lambda']  # decay rate of novelty
         self.gamma = agent_stuff['gamma']  # 1 - future discounting
         self.distraction = agent_stuff['distraction']  # propensity to quit unfinished options

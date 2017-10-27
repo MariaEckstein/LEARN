@@ -61,7 +61,6 @@ plot_each_trial = function(all_dat, gg_save, plot_dir) {
         }
         if (gg_save) {
           file_name = file.path(file_path, paste("trial", tr, ".png", sep = ""))
-          print(file_name)
           ggsave(file_name, grob_theta_option, width=max(all_dat$event_hist$action), height=max(all_dat$event_hist$level))
         }
       }

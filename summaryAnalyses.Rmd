@@ -10,7 +10,7 @@ output: html_document
 ```{r Set parameters load packages etc.}
 
 # Load packages
-source("read_in_data.R"); source("plot_each_trial.R"); source("get_plot_dir.R"); source("plot_summary.R")
+source("read_in_data.R"); source("plot_each_trial.R"); source("get_dir.R"); source("plot_summary.R")
 library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
 theme_set(theme_bw())
 
@@ -21,52 +21,59 @@ if (!dir.exists(sum_plot_dir)) {
   dir.create(sum_plot_dir)
 }
 
+# What data do I have?
+agents = seq(0, 2)
+envs = seq(0, 2)
+
 # Should plots be saved?
 gg_save  = T
+analyze_all_trials = T
 analyze_my_algo = T
 analyze_all_algos = T
 
 # Which data should be plotted?
 which_data = list()
-which_data$n_options_per_level = "[3, 3, 3, 3, 3, 3]"
-which_data$n_levels = 6
+which_data$n_options_per_level = "[5, 5, 5, 5, 5]"
+which_data$n_levels = 5
 which_data$option_length = 2
 which_data$alpha = "0.3"
-which_data$e_lambda = "0.5"
 which_data$n_lambda = "0.3"
-which_data$gamma = "0.7"
+which_data$gamma = "0.9"
 which_data$epsilon = "0.2"
 which_data$distraction = "0.1"
+which_data$env_id = 0
+which_data$agent_id = 0
 ```
 
 ```{r Analyze environments trialwise for all agents}
 
-which_data$env_id = 2
-which_data$agent_id = 2
-
-for (env_id in seq(0, 9)) {
-  for (hier in c("hierarchical", "flat")) {
-    for (learning_signal in c("novelty", "reward")) {
+if (analyze_all_trials) {
+  for (env_id in envs) {
+    for (hier in c("hierarchical", "flat")) {
+      for (learning_signal in c("novelty", "reward")) {
         
-      # Define data to be loaded
-      which_data$env_id = env_id
-      which_data$hier = hier
-      which_data$learning_signal = learning_signal
-      
-      # Load data and attach to dataframe containing all data
-      all_dat = read_in_data(base_dir, which_data)
-      plot_dir = get_plot_dir(which_data, data_dir)
-      plot_each_trial(all_dat, gg_save, plot_dir)
+        print(c(env_id, hier, learning_signal))
+        
+        # Define data to be loaded
+        which_data$env_id = env_id
+        which_data$hier = hier
+        which_data$learning_signal = learning_signal
+        
+        # Load data and attach to dataframe containing all data
+        all_dat = read_in_data(base_dir, which_data)
+        plot_dir = get_dir(base_dir, which_data)$plot_dir
+        plot_each_trial(all_dat, gg_save, plot_dir)
+      }
     }
   }
 }
 ```
 
 ```{r Analyze my HN agent in detail in one specific environment}
-# Read in data
 
 if (analyze_my_algo) {
-  # Set up empty dataframes that will contain all the data
+  
+  # Load data: one environment, 10 agents
   algo_n = data.frame()
   algo_v = data.frame()
   algo_theta = data.frame()
@@ -74,46 +81,34 @@ if (analyze_my_algo) {
   
   which_data$hier = "hierarchical"
   which_data$learning_signal = "novelty"
-  which_data$env_id = 2
+  which_data$env_id = which_data$env_id
   
-  for (agent_id in seq(0, 10)) {
-      
-    # Define data to be loaded
+  for (agent_id in agents) {
     which_data$agent_id = agent_id
-    
-    # Load data and attach to dataframe containing all data
     all_dat = read_in_data(base_dir, which_data)
-    
     algo_n = rbind(algo_n, all_dat$n_hist)
     algo_v = rbind(algo_v, all_dat$v_hist)
     algo_theta = rbind(algo_theta, all_dat$theta_hist)
     rules = rbind(rules, all_dat$rules)
   }
 
-  # Show rules of selected env
+  # Results
+  ## Rules
   rules
   
-  # Show novelty over time
+  ## Novelty over time
   gg_summary_novelty = ggplot(algo_n, aes(trial, value, group = factor(action), color = factor(action), fill = factor(action))) +
     stat_summary(fun.data = "mean_se", geom = "smooth") +
     labs(x = "Trial", y = "Novelty") +
     facet_grid(~ factor(level, levels = unique(algo_n$level), labels = paste("Level", unique(algo_n$level))))
   
-  # Show value over time
+  ## Value over time
   gg_summary_value = gg_summary_novelty + labs(y = "Curiosity")
   gg_summary_value$data = algo_v
   
-  if (gg_save) {
-    identifier = paste(which_data$n_options_per_level, "_e", which_data$env_id, ".png", sep = "")
-    file_name = paste("gg_summary_value_", identifier, sep = "")
-    ggsave(file.path(sum_plot_dir, file_name), gg_summary_value, width = 10, height = 2)
-    file_name = paste("gg_summary_novelty_", identifier, sep = "")
-    ggsave(file.path(sum_plot_dir, file_name), gg_summary_novelty, width = 10, height = 2)
-  }
-  
-  # Final option policies
+  ## Final option policies
   algo_theta_sum = ddply(subset(algo_theta, trial == max(algo_theta$trial)),
-                         .(option, action, feature),
+                         .(level, option, action, feature),
                          summarize,
                          value = mean(value, na.rm = T))
   
@@ -121,14 +116,20 @@ if (analyze_my_algo) {
     geom_tile(aes(fill = value), color = "white") +
     geom_text(aes(label = round(value, 2)), size = 1.5) +
     scale_fill_gradient(low = "white", high = "red", limits = c(min(algo_theta$value), max(algo_theta$value))) +
-    labs(x = "Action ID", y = "Level") +
+    labs(x = "Action ID", y = "Feature") +
     theme(legend.position = "none") +
-    facet_wrap(~ factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))),
-               ncol = 3)
+    facet_wrap(factor(level, levels = sort(unique(algo_theta$level)), labels = paste("Level", sort(unique(algo_theta$level)))) ~
+                 factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))))
   
+  # Save results
   if (gg_save) {
+    identifier = paste(which_data$n_options_per_level, "_e", which_data$env_id, ".png", sep = "")
+    file_name = paste("gg_summary_value_", identifier, sep = "")
+    ggsave(file.path(sum_plot_dir, file_name), gg_summary_value, width = 10, height = 2)
+    file_name = paste("gg_summary_novelty_", identifier, sep = "")
+    ggsave(file.path(sum_plot_dir, file_name), gg_summary_novelty, width = 10, height = 2)
     file_name = paste("gg_theta_", identifier, sep = "")
-    ggsave(file.path(sum_plot_dir, file_name), gg_theta, width = 3, height = 5)
+    ggsave(file.path(sum_plot_dir, file_name), gg_theta, width = which_data$n_levels, height = 5)
   }
   
   # RMSE of option policies}
@@ -137,7 +138,7 @@ if (analyze_my_algo) {
   
   # Subtract agent's values from optimal values in each trial
   
-  # Plto
+  # Plot
 }
 ```
 
@@ -157,43 +158,88 @@ if (analyze_all_algos) {
   
   for (hier in c("hierarchical", "flat")) {
     for (learning_signal in c("novelty", "reward")) {
-      for (agent_id in seq(0, 5)) {
-        for (env_id in seq(0, 9)) {
+      for (env_id in envs) {
+        
+        # Define data to be loaded
+        which_data$hier = hier
+        which_data$learning_signal = learning_signal
+        which_data$env_id = env_id
+        
+        all_dat = read_in_data(base_dir, which_data)
+        rules = rbind(rules, all_dat$rules)
           
-          print(c(hier, learning_signal, agent_id, env_id))
+        for (agent_id in agents) {
           
-          # Define data to be loaded
-          which_data$hier = hier
-          which_data$learning_signal = learning_signal
           which_data$agent_id = agent_id
-          which_data$env_id = env_id
+          print(c(hier, learning_signal, agent_id, env_id))
           
           # Load data and attach to dataframe containing all data
           all_dat = read_in_data(base_dir, which_data)
+          event_hist = rbind(event_hist, all_dat$event_hist)
           
           # n_hist = rbind(n_hist, all_dat$n_hist)
           # v_hist = rbind(v_hist, all_dat$v_hist)
           # theta_hist = rbind(theta_hist, all_dat$theta_hist)
           # state_hist = rbind(state_hist, all_dat$state_hist)
-          option_hist = rbind(option_hist, all_dat$option_hist)
-          event_hist = rbind(event_hist, all_dat$event_hist)
-          # rules = rbind(rules, all_dat$rules)
+          # option_hist = rbind(option_hist, all_dat$option_hist)
   
         }
       }
     }
   }
-}
 
-# Numbers of events
-event_hist$env_id = factor(event_hist$env_id)
-event_hist$agent_id = factor(event_hist$agent_id)
-gg_n_disc_events = ggplot(event_hist, aes(trial, n_disc_events, color = env_id)) +
-  stat_summary(fun.data = "mean_se", geom = "smooth", alpha = 0.5) +
-  stat_summary(aes(group = 1), fun.data = "mean_se", geom = "smooth", color = "black") +
-  labs(x = "Trial", y = "# events discovered", color = "Rule set") +
-  facet_grid(hier ~ learning_signal)
-ggsave(file.path(sum_plot_dir, "gg_n_disc_events.png"), width = 6, height = 5)
+  # Number of events discovered
+  event_hist$env_id = factor(event_hist$env_id)
+  event_hist$agent_id = factor(event_hist$agent_id)
+  gg_n_disc_events = ggplot(event_hist, aes(trial, n_disc_events, color = env_id)) +
+    stat_summary(fun.data = "mean_se", geom = "smooth", alpha = 0.5) +
+    stat_summary(aes(group = 1), fun.data = "mean_se", geom = "smooth", color = "black") +
+    labs(x = "Trial", y = "# events discovered", color = "Rule set") +
+    facet_grid(hier ~ learning_signal)
+  
+  # Number of events produced over time
+  bin_size = 10
+  event_hist$bin = NA
+  for (bin in seq(0, max(event_hist$trial), bin_size)) {
+    event_hist[event_hist$trial >= bin,]$bin = bin
+  }
+  event_hist$option_length = which_data$option_length ** (event_hist$level + 1)
+  event_hist_sum = ddply(event_hist,
+        .(env_id, hier, learning_signal, agent_id, bin, level, option_length),
+        summarize,
+        n_events = sum(value))
+  n_actions = length(unique(event_hist$action))
+  event_hist_sum$frac_events = event_hist_sum$n_events * (event_hist_sum$option_length * n_actions) / 100
+  event_hist_sum$level = factor(event_hist_sum$level)
+  
+  
+  gg_n_events = ggplot(subset(event_hist_sum, level != 0), aes(bin, n_events, color = level)) +
+    stat_summary(fun.data = "mean_se", geom = "pointrange") +
+    labs(x = "Trial", y = paste("# of events per", bin_size, "trials"), color = "Level") +
+    facet_grid(hier ~ learning_signal)
+  
+  gg_frac_events = gg_n_events +
+    aes(bin, frac_events) +
+    labs(x = "Trial", y = "# of events rel. to execution time", color = "Level")
+  
+  # Number of times each action is executed (depending on how many options is it part of)
+  action_centrality = expand.grid(action = unique(event_hist$action), level = unique(event_hist$level))
+  rules
+  
+  # Number of perseverative actions
+  
+  rules
+  
+  if (gg_save) {
+    identifier = paste(which_data$n_options_per_level, ".png", sep = "")
+    ggsave(file.path(sum_plot_dir, paste("gg_n_disc_events_", identifier, sep = "")), width = 6, height = 5)
+    file_name = paste("gg_n_events_", identifier, sep = "")
+    ggsave(file.path(sum_plot_dir, file_name), gg_n_events, width = 5, height = 4)
+    file_name = paste("gg_frac_events_", identifier, sep = "")
+    ggsave(file.path(sum_plot_dir, file_name), gg_frac_events, width = 5, height = 4)
+  }
+  
+}
 ```
 
 ```{r}

@@ -47,55 +47,54 @@
 \maketitle
 
 \begin{abstract}
-  We propose a novel task paradigm, which aims to differentiate reward-learning from novelty-learning, and thereby explains how structured, goal-directed behavior can arise in complex environment that are sparse in rewards. 
+  We propose a novel algorithm that combines curiosity (intrinsic motivation to explore novel states) and temporal abstraction (curiosity-guided formation of sub-goals), with the aim of explaining how structured, goal-directed behavior can arise in complex environment that are sparse in rewards. The algorithm shows meaningful behavior when exploring a complex environment, by learning policies at multiple levels of abstraction simultaneously. 
 \end{abstract}
 
 
 \section{Introduction}
 
-It is desirable for a complex cognitive system, like a human, to understand its environment in a way that allows prediction of future states and events. This is because with the ability to predict the results of its own actions, an agent will be able to control its environment, creating the states and events it desires. The prediction and control of future rewards, for example, has been formalized in reinforcement learning theory (\cite{sutton_reinforcement_2017}). In this framework, an agent learns over time how much (cumulative, temporally discounted) future reward to expect, given a current state of the environment and the agent's action policy. Given the ability to predict, the agent can then maximize future rewards by adjusting its action policy.
+Humans have the astonishing ability to learn from sparse, unorganized data in an environment of sparse rewards, and to create goal-directed action plans in novel, unseen situations, with incredibly quick computation times. How is this possible?
 
-\begin{itemize}
-	\item But it's not all about rewards: We want to learn the structure of the environment (predictive model) before we know which states and actions will be rewarding.
-	\item Example: When an infant looks at a computer monitor, she probably sees a dark frame, filled with colored rectangles and blinking, moving blobs of various sizes. A computer-savy adult, on the other hand, sees a Mac or Windows machine, a bug in the code, or the need to download a new plugin. The perception of the computer monitor changes dramatically upon interaction with it. Interaction creates a structured model of the computer.
-	\item Other examples: language learning: learn phonemes, syllables, words, 2-word sentences, 3-word sentences, whole sentences, poetry; motor learning: learn to grasp, hold, manipulate, ..., play the violin.
-	\item Indeed, psychological research of the last century has stressed again and again that humans represent their world hierarchically (Chess study - chunking; old research on expertise; TS; Anderson? Making coffee)
-	\item What would a predictive model look like that is not focused on reward? Instead of a flat table that specifies how much reward to expect from each state-action pair, we would have a collection of policies that specify how to reach various states in the environment. The agent can control the environment by selecting whatever sub-goal it likes at the moment. Once rewards are added, it can use the learned structure to maximize rewards. 
-	\item introduce HRL
-	\item ML / RL advances in this direction: Machado, ... (cite papers that talk about exploration; sparse rewards; old 2-step paper; Schmidhuber; Deepak Pathak; the other papers in dropbox papers and in the old draft)
-	\item The big question is now how to find valuable sub-goals. Much research, mostly about bottleneck states in the state space (Botvinick -> check in my powerpoint). But this is unrealistic: an agent does not have access to all the information necessary to calculate which states are bottleneck states. 
-	\item The goal of this project is to create an algorithm with human-like behavior. Valuable sug-goals will be identified using the agent's curiosity, i.e., intrinsic motivation (Deepak Pathak's citations; Botvinick paper? -> check powerpoint)
-\end{itemize}
+Research in the cognitive sciences over the past decades has suggested that at least two components are crucial for such behavior: intelligent exploration, driven by intrinsic motivation and targeted hypothesis testing (Gopnik, Lombrozo, Schmidhuber, painting paper, Deepak's citations); and structuring the representation of the environment or task at hand (Anderson, Collins, Chess study, Miller \& Cohen, 2001, Badre \& Frank).
+
+We argue that these two components, intrinsically-motivated exploration and structured representation, go hand in hand. Together, both can lead to an "understanding" of the environment that goes beyond and is more flexible than, say, the prediction of reward. Work in this direction: Novelty: Deepak Pathak, Pulkit Arawal, Yael Niv, Schmidhuber; hierarchy: Marlos Machado, Botvinick, Yael Niv, Pedro Tsividis; combination: Deep HRL paper, 
+
+We propose an algorithm that explores an environment of sparse rewards based on its intrinsic curiosity, which is triggered by novel events. Once an event triggers the agent's curiosity (imagine an infant playing with a toy that suddenly makes a new sound), the agent will try to reproduce the event (try to make the toy produce the sound again). Crucially, the agent does not know yet how to produce the event. In order to achieve this goal, it has to learn, through trial and error, a specific option policy with the goal of producing this event. We model this process through hierarchical reinforcement learning, using the options framework (Sutton, Precup, Singh).
+
+During the option learning process, the agent will acquire a number of option policies targeted at different events (rattling produces one sound, clicking another, ...). The only learning signal hereby is the agent's internal reward upon achieving its self-selected goal. As the option policies get better at producing the goal events, these can be visited more frequently, decrease in novelty, and eventually become less desirable to the agent. 
+
+Nevertheless, the world is full of wonders. Whereas an infant might be curious about individual sounds, a toddler might be interested in children's songs, and an adult in twelve-tone music. In our framework, the agent uses basic option policies as building blocks for more abstract option policies, which are in turn the building blocks for even more abstract option policies, and so on. In other words, the agent can achieve abstract goals by breaking them down into sub-goals and sub-sub-goals, etc.
 
 
 \section{Methods}
 
 \subsection{Novelty-based hierarchical RL}
 
-\begin{itemize}
-	\item The agent explores an environment with sparse rewards, with the goal of "understanding" it (understand = predict \& control). The environment produces events in response to the agent's actions, according to certain rules (see below).
-	\item The agent is intrinsically motivated to investigate novel events (curiosity). The occurrence of a novel event therefore triggers the creation of a sub-goal and the learning of a policy $\pi_e$ targeted at producing $e$. 
-	\item Once the agent decides to investigate a specific event $e$, its actions are guided by the event policy $\pi_e$ that is aimed at producing $e$ ("option policy" in HRL framework). Event policies $\pi$ are learned over time through interactions with the environment.
-	\item This means that there are two fundamental ways of selecting actions: Based on curiosity, and based on even policies.
-	\item Note: The algo is tabular: Discrete states and actions, no function approximation using ANNs.
-\end{itemize}
+Making the things said above more precise, the agent is exploring an environment that produces certain events in response to the agent's actions. An event is defined as the change in one (binary) feature of the environment. The novelty of an event is a function of the number of times the event has occurred (equation XY). The novelty of an event determines the agent's curiosity about it (equation XY). When the agent selects a specific event as sub-goal, the option policy corresponding to this event guides behavior. While within an option, the option values are updated in each step through TD learning, and eventually reflect which actions produce the goal event (equation XY). Curiosity values are updated after the termination of an option policy, based on the novelty of the produced event (or the failure to do so; equation XY).
 
-\subsubsection{Action selection based on curiosity}
+Initially, the agent possesses a set of "basic actions", which lead to a set of "basic events" in a deterministic fashion. When a "level-1 event" occurs for the first time (triggered by a specific sequences of basic actions), a sub-goal corresponding to this event is added to the agent's action space. The action space of this new option comprises all basic actions. "Level-2" events are triggered by specific sequences of level-1 events; their action space comprises all level-1 options; and so on.
 
-\begin{itemize}
-	\item The agent's curiosity $c_e$ for a specific event $e$ is determined by the novelty $n_e$ of the event and the agent's learning rate $\alpha$. $n_e$ is a function of $i_e$, the number of times $e$ has occurred, and the rate $\lambda$ at which novelty decays for a given agent. $n_e$ is weighted by $\gamma^{j_e}$, whereby $\gamma$ is the agent's tendency to discount future rewards, and $j_e$ is the number of time steps spent within $\pi_e$ (see below). Taken together: $c_e = c_e + \alpha_c (n_e - c_e)$ and $n_e = \gamma^{j_e} e^{-\lambda i_e}$. (Note: Agents can only be curious about events that they have seen before, i.e., that have occurred at least once.)
-	\item The agent selects events using an $\epsilon$-greedy policy: In $1-\epsilon$ \% of cases, it selects the event that it is most curious about; in $\epsilon$ \% of cases, it randomly selects among all other events.
-	\item Once the agent selects a specific event, it uses the corresponding event policy $\pi_e$ for actions selection (see below). After $\pi_e$ terminates (usually when $e$ occurs), $i_e$ is incremented by one (if $e$ occurred), $j_e$ represents the number of moves spent inside the option, and $c_e$ is updated. The subsequent event is selected based on the agent's updated curiosity. 
-\end{itemize}
+Because options are strictly hierarchical in this way, time scales differ between options at different levels. Level-1 option policies are updated at each time step (because the agent executes one basic action at each time step), but level-2 option policies are only updated after the termination of each level-1 option. In the experiments presented below, all events consist of two events at the level below. Therefore level-2 option policies can be updated every other time step at most, level-3 options every fourth, level-4 option every 8th, and so on.
 
-\subsubsection{Action selection based on event policy}
+Note: The current algorithm is tabular, i.e., all states, events, and actions are discrete, and state-action values are represented as tables, and are not approximated through neural networks.
+
+\subsubsection{Goal selection based on curiosity}
+
+Formally, let $S = {(f_1, f_2, \ldots, f_n)}$ be a state space of binary features, with $f_i = 0$ or $1$. Each feature represents the occurrence of a specific event in the previous trial. Let $A = {a_1, a_2, \ldots, a_k}, k < n$ be the space of basic actions. $t$ is a deterministic transition function. The transition function is deterministic. Define the transition function: Simple case $a_1$ lights up $f_1$ $f_i(t+1)=1-f_i(t)$, no changes to other features (write this more formally). More complicated case: explain combination of outcomes.
+	
+Curiosity $c_e$ about event $e$ is updated according to: $c_e = c_e + \alpha_c (n_e - c_e)$, with novelty $n_e = \gamma^{j_e} e^{-\lambda i_e}$. Thereby, $\alpha$ is the agent's learning rate ($\alpha = 0.3$ in the experiments below), $\lambda$ is the rate at which novelty decays for the agent, and $i_e$ is the count of occurrences of $e$. $\gamma$ is the agent's discounting of the future ($\gamma = 0.9$), and $j_e$ is the number of time steps spent within an option. The agents selects actions according to an $\epsilon$-greedy policy over the option space $O$, which initially only consists of basic actions, $O = A$ ($\epsilon = 0.2$). 
+
+\subsubsection{Option execution}
+
+Option $o_e$ is created ($O = A \cup \pi_e$), when $e$ occurs for the first time. Each option $o_e$ has the whole state space as initiation set, $I = S$, and has the termination probability $\beta = 1$ when $e$ occurred, and $\beta = 0.1$ otherwise. The action space of $o_e$ comprises all actions $a_{i-1}$ at the level below $o_e$. For example, if $o_1$ is a level-1 option, its action space comprises all basic actions $a_0$. 
+
+$o_i$ has an option policy $\pi_o$, which is the $\epsilon$-greedy action selection based on option values $V_o$. Features $\phi$ differ between options at different levels - they always represent the occurrence of actions at the level below one time step back. $V_o$ are updated through temporal difference learning on the weights $\theta$ of features $\phi$: $\theta = \theta + \alpha (r + \gamma V' - V)$, whereby $V = \theta^T \phi$ and $V' = max_a(\theta^T \phi'$); the pseudo-reward $r = 1$ when $e$ occurred and $r = 0$ otherwise. 
+
+Once the agent selects a specific sub-goal, it uses the corresponding option policy $\pi_e$ for actions selection. If $e$ is reached, $V_o$ are updated with $r = 1$, $i_e$ is incremented by one, and $c_e$ is updated based on the formula above. The next event is selected based on the agent's updated curiosity, etc. 
 
 \begin{itemize}
 	\item All option policies $\pi$ are $\epsilon$-greedy action selection policies based on event-specific Q-values. Each $\pi_e$ has a separate set of Q-values, representing the value of each state-action pair for achieving event $e$. 
 	\item States are defined in terms of previous events, encoded by features $\phi$ (one feature for each action in the event option's repertoire, signifying whether the event corresponding to this action has occurred in the previous trial).
-	\item Actions: Crucially, the agent constructs event policies hierarchically. All event policies (except the most basic ones) are based on more fundamental event options, not basic actions.
-	\item Event-specific Q-values are learned through standard TD learning on the weights $\theta$ of features $\phi$: $\theta = \theta + \alpha (r + \gamma V' - V)$, whereby $V = \theta^T \phi$ and $V' = \theta^T \phi'$.
-	\item $\pi_e$ terminates either when the target event $e$ occurs ($r=1$), or when the agent gives up without $e$ occurring ($r=0$). An agent's propensity to terminate options without achieving the sub-goal is controlled by the distraction parameter, which determines the probability of terminating an option at each step of option execution. 
 	\item Note: $\pi_e$ is updated each time $e$ occurs, even when $\pi_e$ was not in charge of action selection. This is to make it more realistic and more similar to humans, equipped with working memory.
 \end{itemize}
 
@@ -158,6 +157,20 @@ This is interesting because usually people think about prediction in terms of mo
 "Embodiment" is really important, the possibility of the agent to interact with its environment. Because understanding implies control. Kids love to experiment. Cite stuff on how experimentation helps kids learn? (Fei Shu, Tania Lombrozo?, Alison Gopnik?; active learning literature)
 
 \subsection{Future directions}
+
+It is desirable for a complex cognitive system, like a human, to understand its environment in a way that allows prediction of future states and events. This is because with the ability to predict the results of its own actions, an agent will be able to control its environment, creating the states and events it desires. The prediction and control of future rewards, for example, has been formalized in reinforcement learning theory (\cite{sutton_reinforcement_2017}). In this framework, an agent learns over time how much (cumulative, temporally discounted) reward to expect in the future, given the current state of the environment and the agent's action policy. Given the ability to predict, the agent can then maximize future rewards by adjusting its action policy.
+
+\begin{itemize}
+	\item But it's not all about rewards: We want to learn the structure of the environment (predictive model) before we know which states and actions will be rewarding.
+	\item Example: When an infant looks at a computer monitor, she probably sees a dark frame, filled with colored rectangles and blinking, moving blobs of various sizes. A computer-savy adult, on the other hand, sees a Mac or Windows machine, a bug in the code, or the need to download a new plugin. The perception of the computer monitor changes dramatically upon interaction with it. Interaction creates a structured model of the computer.
+	\item Other examples: language learning: learn phonemes, syllables, words, 2-word sentences, 3-word sentences, whole sentences, poetry; motor learning: learn to grasp, hold, manipulate, ..., play the violin.
+	\item Indeed, psychological research of the last century has stressed again and again that humans represent their world hierarchically (Chess study - chunking; old research on expertise; TS; Anderson? Making coffee)
+	\item What would a predictive model look like that is not focused on reward? Instead of a flat table that specifies how much reward to expect from each state-action pair, we would have a collection of policies that specify how to reach various states in the environment. The agent can control the environment by selecting whatever sub-goal it likes at the moment. Once rewards are added, it can use the learned structure to maximize rewards. 
+	\item introduce HRL
+	\item ML / RL advances in this direction: Machado, ... (cite papers that talk about exploration; sparse rewards; old 2-step paper; Schmidhuber; Deepak Pathak; the other papers in dropbox papers and in the old draft)
+	\item The big question is now how to find valuable sub-goals. Much research, mostly about bottleneck states in the state space (Botvinick -> check in my powerpoint). But this is unrealistic: an agent does not have access to all the information necessary to calculate which states are bottleneck states. 
+	\item The goal of this project is to create an algorithm with human-like behavior. Valuable sug-goals will be identified using the agent's curiosity, i.e., intrinsic motivation (Deepak Pathak's citations; Botvinick paper? -> check powerpoint)
+\end{itemize}
 
 \begin{itemize}
 	\item Algo itself could be extended: function approximation (neural network) rather than tabular RL; model curiosity in a more sophisticated way: based on prediction rather than event count (Deepak Pathak's citations)

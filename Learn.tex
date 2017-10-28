@@ -47,65 +47,45 @@
 \maketitle
 
 \begin{abstract}
-  We propose a novel algorithm that combines curiosity (intrinsic motivation to explore novel states) and temporal abstraction (curiosity-guided formation of sub-goals), with the aim of explaining how structured, goal-directed behavior can arise in complex environment that are sparse in rewards. The algorithm shows meaningful behavior when exploring a complex environment, by learning policies at multiple levels of abstraction simultaneously. 
+  We propose an algorithm that combines curiosity (intrinsic motivation to explore novel states) and temporal abstraction (creation of option policies at multiple levels of abstraction), with the aim of shedding some light on how structured, goal-directed behavior can arise in complex environment that are sparse in rewards, as shown by humans. The algorithm shows meaningful behavior when exploring a complex environment. The eventual goal is to bring it to humans and see if they do something similar and look into their brains.
 \end{abstract}
 
 
 \section{Introduction}
 
-Humans have the astonishing ability to learn from sparse, unorganized data in an environment of sparse rewards, and to create goal-directed action plans in novel, unseen situations, with incredibly quick computation times. How is this possible?
+Humans have the astonishing ability to learn from few and unorganized samples in an environment of sparse rewards, and to create goal-directed action plans in novel, unseen situations, with incredibly quick computation times. How is this possible?
 
-Research in the cognitive sciences over the past decades has suggested that at least two components are crucial for such behavior: intelligent exploration, driven by intrinsic motivation and targeted hypothesis testing (Gopnik, Lombrozo, Schmidhuber, painting paper, Deepak's citations); and structuring the representation of the environment or task at hand (Anderson, Collins, Chess study, Miller \& Cohen, 2001, Badre \& Frank).
+Research in the cognitive sciences over the past decades has suggested that at least two components are crucial for such behavior: intelligent exploration, driven by intrinsic motivation and targeted hypothesis testing (Gopnik, Lombrozo, Schmidhuber, painting paper, Deepak's citations); and hierarchical structure of the representation of the environment or task at hand (Anderson, Collins, Chess study, Miller \& Cohen, 2001, Badre \& Frank).
 
-We argue that these two components, intrinsically-motivated exploration and structured representation, go hand in hand. Together, both can lead to an "understanding" of the environment that goes beyond and is more flexible than, say, the prediction of reward. Work in this direction: Novelty: Deepak Pathak, Pulkit Arawal, Yael Niv, Schmidhuber; hierarchy: Marlos Machado, Botvinick, Yael Niv, Pedro Tsividis; combination: Deep HRL paper, 
+We argue that these two components, intrinsically-motivated exploration and hierarchical representation, are more closely related than is usually acknowledged. Implemented jointly, they can lead to an understanding of the environment that goes beyond and is more flexible than, say, the mere prediction of reward as in traditional RL frameworks (Sutton \& Barto). We argue that by combining intrinsically-motivated exploration with hierarchy, agents can discover meaningful patterns of behavior without explicit training, and learn to form multi-step plans without the need of a predictive model. Related work has suggested that this is a valuable approach (Work on novelty: Deepak Pathak, Pulkit Arawal, Yael Niv, Schmidhuber; on hierarchy: Marlos Machado, Botvinick, Yael Niv, Pedro Tsividis; combination of both: Deep HRL paper)
 
-We propose an algorithm that explores an environment of sparse rewards based on its intrinsic curiosity, which is triggered by novel events. Once an event triggers the agent's curiosity (imagine an infant playing with a toy that suddenly makes a new sound), the agent will try to reproduce the event (try to make the toy produce the sound again). Crucially, the agent does not know yet how to produce the event. In order to achieve this goal, it has to learn, through trial and error, a specific option policy with the goal of producing this event. We model this process through hierarchical reinforcement learning, using the options framework (Sutton, Precup, Singh).
+We propose an algorithm that explores an environment of sparse rewards based on its intrinsic curiosity, which is triggered by novel events. Once an event triggers the agent's curiosity (imagine an infant playing with a toy that suddenly makes a new sound), the agent will try to reproduce the event (try to reproduce the sound). Crucially, the agent does not know yet how to produce the event that it is curious about. In order to achieve its goal, it therefore has to learn, through trial and error, a specific option policy that leads to the event. In this way, the agent will learn policies to control various aspects of its environment. We model the process of option creation through hierarchical reinforcement learning, relying on the options framework (Sutton, Precup, Singh). Crucially, the only learning signal hereby is the agent's internal reward upon achieving its self-selected goal.
 
-During the option learning process, the agent will acquire a number of option policies targeted at different events (rattling produces one sound, clicking another, ...). The only learning signal hereby is the agent's internal reward upon achieving its self-selected goal. As the option policies get better at producing the goal events, these can be visited more frequently, decrease in novelty, and eventually become less desirable to the agent. 
-
-Nevertheless, the world is full of wonders. Whereas an infant might be curious about individual sounds, a toddler might be interested in children's songs, and an adult in twelve-tone music. In our framework, the agent uses basic option policies as building blocks for more abstract option policies, which are in turn the building blocks for even more abstract option policies, and so on. In other words, the agent can achieve abstract goals by breaking them down into sub-goals and sub-sub-goals, etc.
+Over the long term, option policies become better and better at producing their goal events, such that the corresponding events can be produced more frequently and, over time, decrease in novelty. This leads to a decrease in the agent's curiosity, and its intrinsic motivation to explore events further once they are understood. Nevertheless, the world is full of wonders. Whereas an infant might be curious about individual sounds, a toddler might be interested in children's songs, and an adult in twelve-tone music or Italian Opera. Acquiring some skills, rather than reducing motivation and slowing down exploration, opens up new possibilities of learning even more abstract skills. In our framework, basic actions are the building blocks for only the most fundamental option policies. More abstract option policies can be created by using option policies as the building blocks; this process can be repeated indefinitely, resulting in option policies of increasing abstraction, limited only by the temporal horizon of the agent. In other words, the agent can learn to achieve abstract goals by breaking them down into sub-goals and sub-sub-goals, etc.
 
 
 \section{Methods}
 
-\subsection{Novelty-based hierarchical RL}
+\subsection{Event novelty and curiosity}
 
-Making the things said above more precise, the agent is exploring an environment that produces certain events in response to the agent's actions. An event is defined as the change in one (binary) feature of the environment. The novelty of an event is a function of the number of times the event has occurred (equation XY). The novelty of an event determines the agent's curiosity about it (equation XY). When the agent selects a specific event as sub-goal, the option policy corresponding to this event guides behavior. While within an option, the option values are updated in each step through TD learning, and eventually reflect which actions produce the goal event (equation XY). Curiosity values are updated after the termination of an option policy, based on the novelty of the produced event (or the failure to do so; equation XY).
+Concretely, the agent is exploring an environment that produces certain events in response to the agent's actions (see below for more details). Here, each event is defined as the change in one (binary) feature of the environment from 0 to 1. The number of times each event has occurred determines the event's novelty. Event novelty determines the agent's curiosity about the event, which in turn determines the agent's propensity to select the event as a target of exploration, i.e., to select the sub-goal of achieving the event.
 
-Initially, the agent possesses a set of "basic actions", which lead to a set of "basic events" in a deterministic fashion. When a "level-1 event" occurs for the first time (triggered by a specific sequences of basic actions), a sub-goal corresponding to this event is added to the agent's action space. The action space of this new option comprises all basic actions. "Level-2" events are triggered by specific sequences of level-1 events; their action space comprises all level-1 options; and so on.
+Formally, novelty $n_e = e^{-\lambda i_e}$; $\lambda$ is the agent's rate of novelty decay (set to $\lambda = 0.3$) and $i_e$ is the number times event $e$ has occurred.
+Curiosity $c_e$ is updated according to $c_e = c_e + \alpha (\gamma^{j_e} n_e - c_e)$; $\alpha$ is the agent's learning rate ($\alpha = 0.3$); $\gamma$ is the agent's discounting of future events ($\gamma = 0.9$), and $j_e$ is the number of time steps spent within option $o_e$, which led to event $e$.
+In order to select sub-goals, the agent uses $\epsilon$-greedy action selection based on its curiosity about all events $e$.
 
-Because options are strictly hierarchical in this way, time scales differ between options at different levels. Level-1 option policies are updated at each time step (because the agent executes one basic action at each time step), but level-2 option policies are only updated after the termination of each level-1 option. In the experiments presented below, all events consist of two events at the level below. Therefore level-2 option policies can be updated every other time step at most, level-3 options every fourth, level-4 option every 8th, and so on.
+\subsection{Option policies}
 
-Note: The current algorithm is tabular, i.e., all states, events, and actions are discrete, and state-action values are represented as tables, and are not approximated through neural networks.
+When the agent selects a specific event as sub-goal, the option policy targeted at this event takes over the control of action selection. The values of the option policy are updated in each step through TD learning, to reflect which actions lead to the sub-goal. After the termination of an option policy, the agent's curiosity about the sub-goal is updated based on the novelty of the produced event (or the failure to do so).
 
-\subsubsection{Goal selection based on curiosity}
+Formally, $o_i$ has an option policy $\pi_o$, which is the $\epsilon$-greedy action selection based on option values $V_o$. $V_o$ are defined by the weights $\theta$ of the binary features $\phi$ that describe the state of the environment, $V_o = \theta^T \phi$. In our case, the features give away the identity of the last event that occurred at the level of available actions prior to action selection.
+$V_o$ are updated through temporal difference learning on the weights $\theta$: $\theta = \theta + \alpha (r + \gamma max_a(V_o') - V_o(a))$; $V' = \theta^T \phi'$; the pseudo-reward $r = 1$ when $e$ occurred (option terminates) and $r = 0$ otherwise; $V_o' = 0$ when the option terminates. 
 
-Formally, let $S = {(f_1, f_2, \ldots, f_n)}$ be a state space of binary features, with $f_i = 0$ or $1$. Each feature represents the occurrence of a specific event in the previous trial. Let $A = {a_1, a_2, \ldots, a_k}, k < n$ be the space of basic actions. $t$ is a deterministic transition function. The transition function is deterministic. Define the transition function: Simple case $a_1$ lights up $f_1$ $f_i(t+1)=1-f_i(t)$, no changes to other features (write this more formally). More complicated case: explain combination of outcomes.
-	
-Curiosity $c_e$ about event $e$ is updated according to: $c_e = c_e + \alpha_c (n_e - c_e)$, with novelty $n_e = \gamma^{j_e} e^{-\lambda i_e}$. Thereby, $\alpha$ is the agent's learning rate ($\alpha = 0.3$ in the experiments below), $\lambda$ is the rate at which novelty decays for the agent, and $i_e$ is the count of occurrences of $e$. $\gamma$ is the agent's discounting of the future ($\gamma = 0.9$), and $j_e$ is the number of time steps spent within an option. The agents selects actions according to an $\epsilon$-greedy policy over the option space $O$, which initially only consists of basic actions, $O = A$ ($\epsilon = 0.2$). 
+\subsection{The task: States, actions, and transitions}
 
-\subsubsection{Option execution}
+- add the figure from my slides that explains how the task works?
 
-Option $o_e$ is created ($O = A \cup \pi_e$), when $e$ occurs for the first time. Each option $o_e$ has the whole state space as initiation set, $I = S$, and has the termination probability $\beta = 1$ when $e$ occurred, and $\beta = 0.1$ otherwise. The action space of $o_e$ comprises all actions $a_{i-1}$ at the level below $o_e$. For example, if $o_1$ is a level-1 option, its action space comprises all basic actions $a_0$. 
-
-$o_i$ has an option policy $\pi_o$, which is the $\epsilon$-greedy action selection based on option values $V_o$. Features $\phi$ differ between options at different levels - they always represent the occurrence of actions at the level below one time step back. $V_o$ are updated through temporal difference learning on the weights $\theta$ of features $\phi$: $\theta = \theta + \alpha (r + \gamma V' - V)$, whereby $V = \theta^T \phi$ and $V' = max_a(\theta^T \phi'$); the pseudo-reward $r = 1$ when $e$ occurred and $r = 0$ otherwise. 
-
-Once the agent selects a specific sub-goal, it uses the corresponding option policy $\pi_e$ for actions selection. If $e$ is reached, $V_o$ are updated with $r = 1$, $i_e$ is incremented by one, and $c_e$ is updated based on the formula above. The next event is selected based on the agent's updated curiosity, etc. 
-
-\begin{itemize}
-	\item All option policies $\pi$ are $\epsilon$-greedy action selection policies based on event-specific Q-values. Each $\pi_e$ has a separate set of Q-values, representing the value of each state-action pair for achieving event $e$. 
-	\item States are defined in terms of previous events, encoded by features $\phi$ (one feature for each action in the event option's repertoire, signifying whether the event corresponding to this action has occurred in the previous trial).
-	\item Note: $\pi_e$ is updated each time $e$ occurs, even when $\pi_e$ was not in charge of action selection. This is to make it more realistic and more similar to humans, equipped with working memory.
-\end{itemize}
-
-\subsubsection{Comparison agents}
-
-We compared the novelty-based hierarchical RL agent to several other RL agents. The reward-based flat RL agent did not set sub-goals or create event policies. It selected actions based on reward, rather then novelty: $v = v + \alpha (r - v)$. Here, $r$ is the number of events occurring at a given time point. 
-
-The two remaining comparison agents are combinations of the reward-based flat RL agent and the novelty-based hierarchical RL agent: The reward-based hierarchical RL agent, and the novelty-based flat RL agent.
-
-
-\subsection{The task}
+Initially, the agent possesses a set of "basic actions", which produce a set of "basic events" in a deterministic fashion. The rules of the environment prescribe that specific sequences of basic actions trigger specific "level-1 events". When a level-1 event occurs for the first time, it is added to the agent's action space as a potential sub-goal. The option policy of the new sub-goal can use all basic actions. Similarly, "level-2" events are triggered by specific sequences of level-1 events; their action space comprises all level-1 options; and so on.
 
 We aimed to create a task that is hierarchical in nature and that can easily be presented to human participants in a laboratory setting. The goal was to reproduce the structure of more natural hierarchical learning tasks, such as the ones mentioned above. 
 
@@ -115,13 +95,40 @@ This structure is aimed at mirroring naturalistic phenomena, such as the combina
 
 More details about our specific implementation: $n$ is identical at all levels; the number of possible events is identical at all levels; rules are allowed to overlap, but cannot be totally identical). E.g., one rule might be [01] (event 0 followed by event 1), and another might be [21].
 
-Example: [Table in the same shape as the state / value tables; each cell contains two numbers that specify the two events that need to occur at the level below in order to produce this event. Shows the rules of the example below.]
+Formally, let $A_0 = a_1, a_2, \ldots, a_k$ be the set of basic actions and let $S = (F_{0_1}, F_{0_2}, \ldots, F_{0_k}, F_{1_1}, F_{1_2}, \ldots, F_{1_k}, F_{2_1}, \ldots)$ be the parameterized state space defined by the binary features $F_{m_n}$. The agent selects actions according to an $\epsilon$-greedy policy over the option space $O$, which is initially $O = A_0$. The deterministic transition between the initial state $s_0$ and $s'$ upon execution of $o_i = a_i, i \in [1, \ldots, k]$ is then defined by $s_0 = (f_{m_n} = 0), m, n = [1, \ldots, k]$ and $s' = (f_{0_i} = 1, f_{m_j} = 0), m = [1, \ldots, k], j = [1, \ldots, i-1, i+1, \ldots, k]$. In words, the new state $s'$ is defined in terms of the action just executed. We define event $e_i$ as the change from a state in which $f_i = 0$ to a state in which $f_i = 1$. The execution of $o_l = a_l, l \in [1, \ldots, k]$ therefore results in the event $e_l$ and the transition from $s'$ to $s'' = (f_{0_l} = 1, f_{m_j} = 0), m = [1, \ldots, k], j = [1, \ldots, l-1, l+1, \ldots, k]$. Note that at level, one one feature is set to 1 at a time. 
+
+The transition function has the following additional property. A small selection of state-action combinations deterministically leads to more than just the corresponding level-0 event $e_{o_n}$. An additional event $e_{1_c}$ will occur if this is determined by the combination of features $f_{0_n}$ and action $a_i$. Similarly, if event $e_{1_c}$ occurred, a level-2 event $e_{2_p}$ will occur if this is determined by the combination of features $f_{1_n}$ and event $e_{1_c}$. The same is true for all levels of the hierarchy. 
+
+\subsection{Option creation}
+
+When an event occurs for the first time, the agent's option space is extended by the option $o_e$, which is targeted at producing event $e$: $O = O \cup o_e$. Each option $o_e$ has the whole state space as initiation set, $I = S$. The termination probability $\beta = 1$ for all states in which $f_e = 1$, i.e., in which the target event $e$ occurred, and $\beta = 0.1$ in all other states. The action space of $o_e$ comprises all options $o_{i-1}$ at the level below $o_e$. For example, if $o_1$ is a level-1 option, its action space comprises all basic actions $a \in A_0$. 
+
+\subsection{Final remarks about the agent and environment}
+
+Because options are strictly hierarchical in this way, time scales differ between options at different levels. Level-1 option policies are updated at each time step (because the agent executes one basic action at each time step), but level-2 option policies are only updated after the termination of each level-1 option. In the experiments presented below, all events consist of two events at the level below. Therefore level-2 option policies can be updated every other time step at most, level-3 options every fourth, level-4 option every 8th, and so on. The environment still has the Markov property, even though its workings are defined by sequences of events at varying time scales. 
+
+Note: The current algorithm is tabular, i.e., all states, events, and actions are discrete, and state-action values are represented as tables, and are not approximated through neural networks.
+
+\subsection{Comparison agents}
+
+We compared the novelty-based hierarchical agent described in the paragraphs above to three other agents. The reward-based hierarchical agent employed options in the same way as the novelty-based hierarchical agent, but used reward $r$ instead of novelty as an update signal for option values, $Q(s, o) = Q(s, o) + \alpha (r - Q(s, o))$. We defined reward as the number events produced in a given trial, i.e., the number of features $f_i$ that changed from 0 to 1. 
+
+The novelty-based flat agent selected options based on curiosity like the novelty-based hierarchical agent, but it did not create or use abstract options. Therefore, $O = A_0$ and $S = S_0$. 
+
+The reward-based flat agent is a combination of these two agents.
 
 \section{Results}
 
 All results shown for agents with $\alpha = 0.3$, $\lambda = 0.3$, $\gamma = 0.7$, $\epsilon = 0.2$, $distraction = 0.1$. All environments had 3 basic actions, and 3 events at each level of the hierarchy. Each event was triggered by the sequential occurrence of 2 specific events at the level below. The environment had 6 levels of hierarchy in an effort to max out the agents. 
 
 \subsection{Behavior of the novelty-based hierarchical agent}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.5\linewidth]{data/plots/Novelty.png}
+	\caption{Example illustration of the task. At the current state, three level-0 lights (blue) are on, all level-1 lights are off (invisible) and all three level-2 lights are on, meaning that they will be replaced with a single level-3 light in this turn. The agent's goal is to turn on "all the lights".}
+	\label{TaskFigure}
+\end{figure}
 
 \begin{itemize}
 	\item Novelty over time: One plot for each level, showing how novelty decreases over time; will be the average of 5 agents who played the same environment [the environment with the rules above].
@@ -178,6 +185,7 @@ It is desirable for a complex cognitive system, like a human, to understand its 
 	\item extract RL features and look for them in the brain
 	\item Check if we can reproduce specific phenomena related to hierarchical learning. First, does the agent have a learning advantage when it is allowed to explore the environment first (without rewards), before asked to exploit it (add rewards, see how long it takes the agent to find the best strategy, compared to a flat or non-trained agent). Second, is there interference when the agent is trained in one environment and then posed into an environment whose options are just slightly different (reason why second-language speakers never get rid of their accent: it's situated at a low level in the language hierarchy).
 	\item Check if there is more on the powerpoint.
+	\item Maybe all is really just exploration: Science, in the end, is the task of understanding the world.
 \end{itemize}
 
 Taken together, by creating the hierarchical novelty-seeking agent, we hope to show that learning of meaningful behavior can be driven by learning itself, rather than external rewards. In this framework, the learner produces the crucial learning signals itself, by selecting actions that over time reduce novelty. In other words, this learner balances the search for novelty with reducing prediction errors. It explores the environment in a systematic way, forms "hypotheses" and conducts "experiments", in order to learn more. 

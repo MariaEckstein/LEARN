@@ -1,7 +1,7 @@
 # Define variables
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/'
 n_trials = 400
-n_agents = 10
+n_agents = 2
 n_envs = 30
 env_stuff = {'option_length': 2,
              'n_options_per_level': [5, 5, 5, 5, 5]}
@@ -44,7 +44,7 @@ def let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir):
 
 # Execute the function: let different agents play in different environments!
 from environment import Environment
-for env_id in range(7, n_envs):
+for env_id in range(8, n_envs):
 
     print('Environment', env_id)
     env_stuff['id'] = env_id

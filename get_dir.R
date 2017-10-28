@@ -16,7 +16,7 @@ get_dir = function(base_dir, which_data) {
                    sep = "")
   
   # Get plot directory and creat if not existent
-  plot_dir = file.path(data_dir, paste("plots_e", which_data$env_id, "a_", which_data$agent_id, sep = ""))
+  plot_dir = file.path(data_dir, paste("plots_e", which_data$env_id, "_a", which_data$agent_id, sep = ""))
   if (!dir.exists(plot_dir)) {
     dir.create(plot_dir)
   }

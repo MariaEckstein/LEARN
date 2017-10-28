@@ -65,7 +65,7 @@ read_in_data = function(base_dir, which_data) {
   file_name = paste("theta_history_long_", file_id, ".csv", sep = "")
   theta_hist = read.csv(file = file.path(data_dir, file_name), header = T)
   theta_hist$X = NULL
-  theta_hist = subset(theta_hist, value != 0)
+  # theta_hist = subset(theta_hist, value != 0)
   # Add levels column
   theta_hist$level = 0
   for (level in seq(which_data$n_levels)) {

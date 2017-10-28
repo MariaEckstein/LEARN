@@ -44,7 +44,7 @@ def let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir):
 
 # Execute the function: let different agents play in different environments!
 from environment import Environment
-for env_id in range(8, n_envs):
+for env_id in [8, 12, 13, 14, 15]:#range(8, n_envs):
 
     print('Environment', env_id)
     env_stuff['id'] = env_id

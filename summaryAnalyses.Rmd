@@ -109,7 +109,7 @@ if (analyze_my_algo) {
   ## Novelty over time
   gg_summary_novelty = ggplot(algo_n, aes(trial, value, group = action, color = action, fill = action)) +
     stat_summary(fun.data = "mean_se", geom = "smooth") +
-    labs(x = "Trial", y = "Novelty", color = "Action", fill = "Action") +
+    labs(x = "Time step", y = "Novelty", color = "Event", fill = "Event") +
     facet_grid(~ factor(level, levels = unique(algo_n$level), labels = paste("Level", unique(algo_n$level))))
   
   ## Value over time
@@ -121,7 +121,7 @@ if (analyze_my_algo) {
     geom_tile(aes(fill = value), color = "white") +
     geom_text(aes(label = round(value, 2)), size = 1.5) +
     scale_fill_gradient(low = "white", high = "red", limits = c(min(algo_theta$value), max(algo_theta$value))) +
-    labs(x = "Action ID", y = "Feature") +
+    labs(x = "Action", y = "Feature") +
     theme(legend.position = "none") +
     facet_wrap(factor(level, levels = sort(unique(algo_theta$level)), labels = paste("Level", sort(unique(algo_theta$level)))) ~
                  factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))))
@@ -183,12 +183,6 @@ if (analyze_all_algos) {
           all_dat = read_in_data(base_dir, which_data)
           event_hist = rbind(event_hist, all_dat$event_hist)
           v_hist = rbind(v_hist, all_dat$v_hist)
-          
-          # n_hist = rbind(n_hist, all_dat$n_hist)
-          # theta_hist = rbind(theta_hist, all_dat$theta_hist)
-          # state_hist = rbind(state_hist, all_dat$state_hist)
-          # option_hist = rbind(option_hist, all_dat$option_hist)
-  
         }
       }
     }
@@ -218,33 +212,44 @@ if (analyze_all_algos) {
         n_events = sum(value))
   n_actions = length(unique(event_hist$action))
   event_hist_sum$frac_events = event_hist_sum$n_events * (event_hist_sum$option_length * n_actions) / 100
+  event_hist_sum = ddply(event_hist_sum,
+                        .(env_id, hier, learning_signal, bin, level, option_length),
+                        summarize,
+                        frac_events = mean(frac_events),
+                        n_events = mean(n_events))
   event_hist_sum$level = factor(event_hist_sum$level)
+  
+  event_hist_sum2 = ddply(event_hist,
+                          .(env_id, hier, learning_signal, algorithm, trial, level, option_length),
+                          summarize,
+                          n_disc_events = mean(n_disc_events))
   
   # Plot
   ## Option values over time
   gg_v = ggplot(v_hist, aes(trial, value, color = level)) +
     stat_summary(fun.y = "mean", geom = "line") +
-    labs(x = "Trial", y = "Option / action value", color = "Level") +
+    labs(x = "Time step", y = "Option / action value", color = "Level") +
     facet_grid(hier ~ learning_signal)
   
   ## Number of events discovered
-  gg_n_disc_events = ggplot(event_hist, aes(trial, n_disc_events, color = algorithm)) +
-    stat_summary(fun.y = "mean", geom = "line") +
-    labs(x = "Trial", y = "# events discovered", color = "Algorithm")
+  gg_n_disc_events = ggplot(event_hist_sum2, aes(trial, n_disc_events, color = algorithm, fill = algorithm)) +
+    stat_summary(fun.data = "mean_cl_normal", geom = "smooth") +
+    labs(x = "Time step", y = "# events discovered", color = "Algorithm", fill = "Algorithm")
   gg_n_disc_events_big = gg_n_disc_events + facet_wrap(~ paste("Env.", env_id))
   
   # Number of events elicited
-  gg_n_events = ggplot(subset(event_hist_sum, level != 0), aes(bin, n_events, color = level)) +
-    # stat_summary(fun.data = "mean_se", geom = "pointrange") +
-    stat_summary(fun.y = "mean", geom = "line") +
-    labs(x = "Trial", y = paste("# of events per", bin_size, "trials"), color = "Level") +
+  gg_n_events = ggplot(subset(event_hist_sum), aes(bin, n_events, color = level, fill = level)) +
+    stat_summary(fun.data = "mean_cl_normal", geom = "smooth") +
+    scale_color_brewer(type = "seq", palette = 4, direction = -1) +
+    scale_fill_brewer(type = "seq", palette = 4, direction = -1) +
+    labs(x = "Time step", y = paste("# of events per", bin_size, "time steps"), color = "Level", fill = "Level") +
     coord_cartesian(y = c(0, bin_size)) +
     facet_grid(hier ~ learning_signal)
   
   gg_frac_events = gg_n_events +
     aes(bin, frac_events) +
     coord_cartesian(y = c(0, 1)) +
-    labs(x = "Trial", y = "# of events rel. to execution time", color = "Level")
+    labs(x = "Time step", y = "# of events rel. to theor. max", color = "Level")
   
   ## Number of times each action is executed (depending on how many options is it part of)
   action_centrality = expand.grid(action = unique(event_hist$action), level = unique(event_hist$level))
@@ -260,7 +265,6 @@ if (analyze_all_algos) {
     ggsave(file.path(sum_plot_dir, paste("gg_n_events_", identifier, sep = "")), gg_n_events, width = 5, height = 4, device = "jpeg")
     ggsave(file.path(sum_plot_dir, paste("gg_frac_events_", identifier, sep = "")), gg_frac_events, width = 5, height = 3, device = "jpeg")
   }
-  
 }
 ```
 

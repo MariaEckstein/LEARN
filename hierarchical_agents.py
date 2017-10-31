@@ -4,6 +4,7 @@ from v import V
 
 
 # TDs:
+# - get rid of the dataframes that take too long to save to make it faster
 # - check if i'm counting the number of steps right (steps_till_event_reached) -> it's weird that level-0 actions have lower curiosity than higher-level actions
 # - fix history -> make nicer, more general functions, avoid repeating myself
 # - save rules

@@ -12,6 +12,7 @@ class Theta(object):
     def create_option(self, event, env, v):
         action_level = event[0] - 1
         option_level = event[0]
+        option_position = event[1]
         caller_level = event[0] + 1
         # Fill up theta table of newly-encountered option
         if action_level >= 0:  # only for options (i.e., action level exists)
@@ -24,10 +25,9 @@ class Theta(object):
             caller_options = np.argwhere(~np.isnan(v[caller_level]))
             if len(caller_options) > 0:
                 for caller in caller_options:
-                    discovered_option = event
                     caller_index = self.option_coord_to_index([caller_level, caller])
                     n_options = env.n_options_per_level[option_level]
-                    self.theta[caller_index, discovered_option, 0:n_options] = self.initial_theta
+                    self.theta[caller_index, option_position, 0:n_options] = self.initial_theta
 
     def update(self, agent, hist, current_option, goal_achieved, state_before, state_after):
         action_level = current_option[0] - 1

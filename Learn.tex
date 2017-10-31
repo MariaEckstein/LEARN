@@ -3,6 +3,9 @@
 \usepackage[nonatbib]{nips_2017}
 \usepackage{nips_2017}
 
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2017}
+
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
@@ -13,11 +16,11 @@
 \usepackage{microtype}      % microtypography
 \usepackage{graphicx}
 
-\usepackage[style=apa,backend=biber]{biblatex}
+\usepackage[backend=biber]{biblatex}
 \addbibresource{NIPS2017.bib}
 \DeclareLanguageMapping{english}{american-apa}
 
-\title{Structuring exploration and enhancing learning through intrinsic motivation: A combination of novelty seeking and hierarchical reinforcement learning}
+\title{Structuring exploration through intrinsic motivation: A combination of novelty seeking and hierarchical reinforcement learning}
 
 \author{
   Maria K.~Eckstein \\
@@ -42,33 +45,31 @@
 \maketitle
 
 \begin{abstract}
-    Humans have the astonishing ability to learn meaningful behavior from few and unorganized samples, in an environment of sparse rewards, and to create goal-directed action plans in novel, unseen situations, with incredibly quick computation times. All of this has been difficult for artificial intelligence. 
-
-
-  We propose an algorithm that combines curiosity (intrinsic motivation to explore novel states) and temporal abstraction (creation of option policies at multiple levels of abstraction), with the aim of shedding some light on how structured, goal-directed behavior can arise in complex environment that are sparse in rewards, as shown by humans. The algorithm shows meaningful behavior when exploring a complex environment. The eventual goal is to bring it to humans and see if they do something similar and look into their brains.
+    Humans have the astonishing ability to learn meaningful behavior from little and unorganized data while facing an environment of sparse rewards, and to create goal-directed action plans in novel, unseen situations with incredibly quick computation times. How this is possible is a riddle both for psychology and artificial intelligence. We suggest that two specific mechanisms, curiosity (intrinsic motivation to explore novel states) and temporal abstraction (creation of option policies at multiple levels of abstraction), are especially relevant in this domain. In order to test this hypothesis, we created a curiosity-seeking hierarchical reinforcement learning agent and let it explore an unknown environment with hierarchical structure. The results are promising: The agent explores the environment in a more systematic way than agents that lack curiosity, hierarchical structure, or both. Doing this, the agent discovers a larger number of meaningful states, and visits these states more often. In future research, we are planning to subject human participants to the same task as used in the agent and test whether human behavior can indeed be explained by these mechanisms.
 \end{abstract}
 
 
 \section{Introduction}
 
-Humans have the astonishing ability to learn from few and unorganized samples in an environment of sparse rewards, and to create goal-directed action plans in novel, unseen situations, with incredibly quick computation times. How is this possible? Here, we take inspiration from cognitive science and neuroscience to propose a mechanism.
+Research in the cognitive sciences over the past decades has suggested that at least two components are crucial for structured, goal-oriented behavior: the hierarchical representation of the problem space (\cite{collins_reasoning_2012, anderson_act:_1996, miller_integrative_2001, frank_mechanisms_2012, chase_perception_1973, botvinick_model-based_2014}); and intelligent exploration, driven by intrinsic motivation and targeted hypothesis testing (\cite{gopnik_scientific_2012, schmidhuber_formal_2010, lepper_undermining_1973}). 
 
-Research in the cognitive sciences over the past decades has suggested that at least two components are crucial for such behavior: hierarchical structure of the representation of the environment or task at hand (Anderson, Collins, Chess study, Miller \& Cohen, 2001, Badre \& Frank); and intelligent exploration, driven by intrinsic motivation and targeted hypothesis testing (Gopnik, Lombrozo, Schmidhuber, painting paper, Deepak's citations). Neuroscience literature shows that novelty is an important driver of exploration, with novel events triggering reward-like signals in the brain [cite DA and novelty literature].
+We argue that these two components--intrinsically-motivated exploration and hierarchical representation--are more closely related than is usually acknowledged. One argument for this comes from neuroscience: Midbrain dopaminergic activity, known to be elicited by reward prediction errors (\cite{Schultz, schultz_neural_1997}) and to act as a learning signal for the brain, is also elicited by novel events (\cite{wittmann_striatal_2008}), suggesting that novelty too might trigger learning. We hypothesize that implemented jointly, intrinsically-motivated exploration and hierarchical representation can lead to an understanding of the environment that goes beyond and is more flexible than the mere prediction of reward as in traditional RL frameworks (\cite{sutton_reinforcement_2017}). We expect that agents will be able to discover meaningful patterns of behavior without explicit training, and learn to form multi-step plans without the need of a predictive model, as suggested by previous research in this domain (\cite{machado_learning_2016, chentanez_intrinsically_2005, pathak_curiosity-driven_2017, kulkarni_hierarchical_2016}).%(Work on novelty: Deepak Pathak, Pulkit Arawal, Yael Niv, Schmidhuber; on hierarchy: Marlos Machado, Botvinick, Yael Niv, Pedro Tsividis; combination of both: Deep HRL paper)
 
-We argue that these two components - intrinsically-motivated exploration and hierarchical representation - are more closely related than is usually acknowledged. Implemented jointly, they can lead to an understanding of the environment that goes beyond and is more flexible than the mere prediction of reward as in traditional RL frameworks (Sutton \& Barto). We argue that by combining intrinsically-motivated exploration with hierarchy, agents can discover meaningful patterns of behavior without explicit training, and learn to form multi-step plans without the need of a predictive model.
+We propose a curiosity-driven hierarchical reinforcement learning (CHRL) algorithm that explores a rewards-free environment based on its intrinsic curiosity, which is triggered by novel events. Once an event triggers the agent's curiosity (imagine an infant playing with a toy that suddenly makes a new sound), the agent will try to reproduce the event (try to reproduce the sound). Crucially, the agent does not know yet how to produce the event that it is curious about. In order to achieve its goal, it therefore has to learn, through trial and error, a specific option policy that leads to the event. In this way, the agent will learn policies to control various aspects of its environment. We model the process of option creation through hierarchical reinforcement learning, based on the options framework (\cite{sutton_between_1999}).
 
-We propose a novelty-based hierarchical reinforcement learning (NHRL) algorithm that explores a rewards-free environment based on its intrinsic curiosity, which is triggered by novel events. Once an event triggers the agent's curiosity (imagine an infant playing with a toy that suddenly makes a new sound), the agent will try to reproduce the event (try to reproduce the sound). Crucially, the agent does not know yet how to produce the event that it is curious about. In order to achieve its goal, it therefore has to learn, through trial and error, a specific option policy that leads to the event. In this way, the agent will learn policies to control various aspects of its environment. We model the process of option creation through hierarchical reinforcement learning, relying on the options framework (Sutton, Precup, Singh). Crucially, the only learning signals are fully internally determined: 1) for learning option policies, the agent's internal pseudo-reward upon achieving its self-selected goal; and 2) the events' novelty for learning the value of options.
+In our algorithm, only the most fundamental option policies are based on basic actions. More abstract option policies can be created by using option policies as the building blocks; this process can be repeated indefinitely, resulting in option policies of increasing abstraction, limited only by the temporal horizon of the agent. In other words, the agent can learn to achieve abstract goals by breaking them down into sub-goals and sub-sub-goals, etc.
 
-We show that option policies become better and better at producing their goal events, such that the corresponding events can be produced more frequently and, over time, decrease in novelty. This leads to a decrease in the agent's curiosity, and its intrinsic motivation to explore events further once they are understood. Nevertheless, the world is full of wonders. Whereas an infant might be curious about individual sounds, a toddler might be interested in children's songs, and an adult in twelve-tone music or Italian Opera. Acquiring new skills, rather than reducing motivation and slowing down exploration, opens up new possibilities of learning even more abstract skills. In our framework, basic actions are the building blocks for only the most fundamental option policies. More abstract option policies can be created by using option policies as the building blocks; this process can be repeated indefinitely, resulting in option policies of increasing abstraction, limited only by the temporal horizon of the agent. In other words, the agent can learn to achieve abstract goals by breaking them down into sub-goals and sub-sub-goals, etc.
+Crucially, our algorithm relies solely on internally determined learning signals to guide its learning and behavior: 1) for learning option policies, the agent's internal pseudo-reward upon achieving its self-selected goal; and 2) the events' novelty for learning the value of options.
+
 
 \section{Methods}
  
 \subsection{The task: States, actions, and transitions}
 
-We created a learning environment with a hierarchical structure, as found in more naturalistic circumstances such as language or motor learning, which could be realistically be presented to human learners in future experiments. %Language learning, for example, progresses from learning phonemes to combining phonemes into syllables, syllables into words, words into phrases, phrases into sentences, etc.
-In our task, an agent can execute a small number of "basic" actions that trigger specific events in the environment. Each basic action deterministically produces a unique corresponding "basic" (level-0) event. In addition, certain sequences of basic actions trigger a "level-1" event, in addition to the basic event. Similarly, certain sequences of level-1 events produce level-2 events, etc.
+We created a learning environment with a hierarchical structure, as found in more naturalistic circumstances such as language or motor learning, which could realistically be presented to human learners in future experiments. %Language learning, for example, progresses from learning phonemes to combining phonemes into syllables, syllables into words, words into phrases, phrases into sentences, etc.
+In our task, the agent can execute a small number of "basic" actions that trigger specific events in the environment. Each basic action deterministically produces a unique corresponding "basic" (level-0) event. In addition, certain sequences of basic actions trigger a "level-1" event, in addition to the basic event. Similarly, certain sequences of level-1 events produce level-2 events, etc.
 
-Formally, we define $A_0 = a_{0, 1}, a_{0, 2}, \ldots, a_{0, k}$, the set of the agent's $k$ basic actions and $S = {(f_{0, 1}, \ldots, f_{0, k_0}, f_{1, 1}, \ldots, f_{1, k_1}, \ldots, f_{l, 1}, \ldots, f_{L, k_L})}$, the state space defined by binary features $f_{l, i}$ referring to level $l$ and index $i$. The environment's transition function has the following properties. First, if the agent selects $a_{0,i}$ at trial $t$, then the new state's level-0 features are $f_{0,i}=1$ and $\forall j \neq i, f_{0,j}=0$: action $a_{0, i}$ changes the feature $f_{0, i}$ from 0 to 1 - this change in feature is "event" $e_{0, i}$). Second, at any level $l$, there is at most one index $i$ such that $f_{l,i}=1$. To achieve this, all features $f_{l, j}, \forall j$ are set to 0 before feature $f_{l, i}$ is set to 1. Third, at each level $l$, there exist triplets $i \neq j$ and $k$ such that if $f_{l,i}(t)=1$ and $a(t)=a_{l,j}$, then $f_{l+1, k}=1$: lower-level actions in specific states can trigger higher-level events, in addition to their own level's event.
+Formally, we define $A_0 = a_{0, 1}, a_{0, 2}, \ldots, a_{0, k}$, the set of the agent's $k$ basic actions and $S = \{(f_{0, 1}, \ldots, f_{0, k_0}, f_{1, 1}, \ldots, f_{1, k_1}, \ldots, f_{l, 1}, \ldots, f_{L, k_L})\}$, the state space defined by binary features $f_{l, i}$ referring to level $l$ and index $i$. The environment's transition function has the following properties. First, if the agent selects $a_{0,i}$ at trial $t$, then the new state's level-0 features are $f_{0,i}=1$ and $\forall j \neq i, f_{0,j}=0$: action $a_{0, i}$ changes the feature $f_{0, i}$ from 0 to 1 - this change in feature is "event" $e_{0, i}$). Second, at any level $l$, there is at most one index $i$ such that $f_{l,i}=1$. To achieve this, all features $f_{l, j}, \forall j$ are set to 0 before feature $f_{l, i}$ is set to 1. Third, at each level $l$, there exist triplets $i \neq j$ and $k$ such that if $f_{l,i}(t)=1$ and $a(t)=a_{l,j}$, then $f_{l+1, k}=1$: lower-level actions in specific states can trigger higher-level events, in addition to their own level's event.
 
 %By defining features this way, the environment has the Markov property even though its workings are defined by sequences of events at varying time scales. 
 
@@ -88,24 +89,24 @@ Formally, the agent's initial option space $O$ comprises only basic actions, $O 
 
 When the agent selects a specific event $e$ as sub-goal, the option policy $o_e$ controls action selection until the option terminates (see above). The option policy learns through temporal-difference learning (\cite{sutton_reinforcement_2017}) which actions lead to the sub-goal. After the termination of an option, the agent's curiosity about the sub-goal is updated based on the novelty of the produced event (or the failure to produce the event).
 
-Formally, option $o$'s policy $\pi_o$ is $\epsilon$-greedy over within-option values $V_o$. $V_o$ are defined by the weights $\theta$ of the binary features $f(t)$ that describe the state of the environment at time $t$, $V_o^{t+1}(s_t, a_t) = \theta^T f(t)$. 
-$V_o$ are updated through temporal difference learning on the weights $\theta$: $\theta(t+1) = \theta(t) + \alpha (r_p + \gamma max_a(V_o^{t}(s_{t+1}, a)) - V_o^{t}(s_t, a_t))$; here, the pseudo-reward $r_p = 1$ when $e$ occurred (and the option terminates) and $r_p = 0$ otherwise; $V_o(s_{t+1},.) = 0$ when the option terminates. 
+Formally, option $o$'s policy $\pi_o$ is $\epsilon$-greedy over within-option values $V_o$. $V_o$ are defined by the weights $\theta$ of the binary features $f(t)$ that describe the state of the environment at time $t$, $V_o^{t}(s_t, a_t) = \theta^T f(t)$. 
+$V_o$ are updated through temporal difference learning on the weights $\theta$: $\theta(t+1) = \theta(t) + \alpha (r_p + \gamma max_a(V_o^{t}(s_{t+1}, a)) - V_o^{t}(s_t, a_t))$; here, the pseudo-reward $r_p = 1$ when $e$ occurred (and the option terminates) and $r_p = 0$ otherwise; $V_o(s_{t+1},\cdot) = 0$ when the option terminates. 
 
 \subsection{Simulations and competing algorithms} \label{Comparison agents}
 
 We simulated the agents' behavior over environments designed to be sufficiently complex to challenge learning: 5 hierarchical levels ($L = 5$); and $k = 5$ possible events at each level. All rules controlling the occurrence of higher-level events had length 2, i.e., two subsequent events at one level could create an event at the level above.%; rules were allowed to overlap, but could not be identical, e.g., when one rule was $e_{l_2} + e_{l_3} \rightarrow e_{l+1, 1}$ ($e_{l_2}$ followed by $e_{l_3}$ produces $e_{l+1, 1}$), another rule might be $e_{l_2} + e_{l_4} \rightarrow e_{l+1, 2}$). 
 
-Agents were allowed to explore the environment for 400 (section \ref{Results NHRL}) or 300 time steps (section \ref{Results compare all}), i.e., executing 300 basic actions. We used the following parameter settings for all agents: $\alpha = 0.3$, $\lambda = 0.3$, $\gamma = 0.9$, $\epsilon = 0.2$, and $\epsilon_T = 0.1$. We obtain similar results with different parameter sets. The data shown below are based on the average performance of 15 agents in a single environment (section \ref{Results NHRL}), and the average performance of 3 agents in 15 environments (section \ref{Results compare all}). The results hold for individual agents and environments.
+Agents were allowed to explore the environment for 400 (section \ref{Results CHRL}) or 300 time steps (section \ref{Results compare all}), i.e., executing 300 basic actions. We used the following parameter settings for all agents: $\alpha = 0.3$, $\lambda = 0.3$, $\gamma = 0.9$, $\epsilon = 0.2$, and $\epsilon_T = 0.1$. We obtain similar results with different parameter sets. The data shown below are based on the average performance of 15 agents in a single environment (section \ref{Results CHRL}), and the average performance of 3 agents in 15 environments (section \ref{Results compare all}). The results hold for individual agents and environments.
 
-To investigate the importance of both hierarchical structure and novelty seeking to behavior, we compared the NHRL agent to three other agents without one or both of these mechanisms. The reward-based hierarchical agent created and employed options in the same way as the NHRL agent, but used reward $r$ instead of novelty as an update signal for option values; we define reward as the number of events produced in a given trial.
-The novelty-based flat agent selected options based on curiosity like the NHRL agent, but it did not create or use options. Therefore, $O = A_0$ and $S = S_0$. The reward-based flat agent is a combination of these two agents, with neither options nor novelty-based learning.
+To investigate the importance of both hierarchical structure and novelty seeking to behavior, we compared the CHRL agent to three other agents without one or both of these mechanisms. The reward-based hierarchical agent created and employed options in the same way as the CHRL agent, but used reward $r$ instead of novelty as an update signal for option values; we define reward as the number of events produced in a given trial.
+The novelty-based flat agent selected options based on curiosity like the CHRL agent, but it did not create or use options. Therefore, $O = A_0$ and $S = S_0$. The reward-based flat agent is a combination of these two agents, with neither options nor novelty-based learning.
 
 
 \section{Results}
 
-\subsection{Behavior of the NHRL agent} \label{Results NHRL}
+\subsection{Behavior of the CHRL agent} \label{Results CHRL}
 
-Through exploration and experience of novel events, the NHRL agent acquired several different, hierarchically structured option policies. Thereby, option policies targeted at simpler events were learned faster than for complex events, and final policies were also more accurate (data not shown).
+Through exploration and experience of novel events, the CHRL agent acquired several different, hierarchically structured option policies. Thereby, option policies targeted at simpler events were learned faster than for complex events, and final policies were also more accurate (data not shown).
 
 In addition, as expected, the agent's curiosity decreased fastest for basic events (level 0), and slower for events at higher levels of abstraction (levels 1-4) (fig. \ref{CuriosityFigure}). In other words, the simpler an option, the faster the agent lost interest in executing it for it's own sake. Importantly, this does not imply that the agent executed simple options less often overall. On the contrary, the rate of all abstract events increased over time (see fig. \ref{CEvents}). The reason for this is that simple options form the building blocks of all abstract options.
 
@@ -119,11 +120,11 @@ In addition, as expected, the agent's curiosity decreased fastest for basic even
 	\label{CuriosityFigure}
 \end{figure}
 
-\subsection{Comparison of the NHRL agent and other agents} \label{Results compare all}
+\subsection{Comparison of the CHRL agent and other agents} \label{Results compare all}
 
-We finally compared the behavior of the NHRL agent to three other three agents (see section \ref{Comparison agents}). The NHRL agent discovered a larger number of different events than any other algorithm, and at a faster rate (fig. \ref{CEvents} A). Both the novelty-based flat agent and the reward-based hierarchical agent outperformed the reward-based flat agent, suggesting that both curiosity and hierarchical structure were crucial for effective exploration.
+We finally compared the behavior of the CHRL agent to three other three agents (see section \ref{Comparison agents}). The CHRL agent discovered a larger number of different events than any other algorithm, and at a faster rate (fig. \ref{CEvents} A). Both the novelty-based flat agent and the reward-based hierarchical agent outperformed the reward-based flat agent, suggesting that both curiosity and hierarchical structure were crucial for effective exploration.
 
-The reason for the exploration advantage is the NHRL agent's specific pattern of curiosity, with larger curiosity for higher-level events. Due to that, the agent will execute more higher-level options (fig. \ref{CEvents} B), which increases the probability of observing events at higher levels. 
+The reason for the exploration advantage is the CHRL agent's specific pattern of curiosity, with larger curiosity for higher-level events. Due to that, the agent will execute more higher-level options (fig. \ref{CEvents} B), which increases the probability of observing events at higher levels. 
 
 \begin{figure}[h]
 	\centering
@@ -135,7 +136,41 @@ The reason for the exploration advantage is the NHRL agent's specific pattern of
 
 \section{Conclusion}
 
-We have shown that a NHRL agent explores an environment with hierarchical structure in a more goal-directed and thorough way than a flat agent. It discovers more different events and learns strategy to reproduce these events at iths own wish. Doing this, it does not get bored - very simple action sequences (options) get boring, but it keeps adding abstract goals, which get less and less boring. 
+We have started by stating that two factors crucially contribute to human ability to form goal-directed, abstract action plans in environments that are unorganized and sparse in rewards: curiosity-driven exploration and the creation of hierarchical option policies. Both factors have been the target of various research in the cognitive sciences (cite) and, more recently, have gained interest in computer science and artificial intelligence research (cite).
+
+In order to test our hypothesis, we implemented a reinforcement-learning algorithm that was driven by curiosity and that had the ability to create hierarchical option policies, the CHRL agent. This agent indeed showed characteristics expected from human learners. For example, the agent's curiosity declined fastest for the most basic events, but slower for more abstract events. The same pattern is expected from human learners. We show that option policies become better and better at producing their goal events, such that the corresponding events can be produced more frequently and, over time, decrease in novelty. This leads to a decrease in the agent's curiosity, and its intrinsic motivation to explore events further once they are understood. Nevertheless, the world is full of wonders. Whereas an infant might be curious about individual sounds, a toddler might be interested in children's songs, and an adult in twelve-tone music or Italian Opera. Acquiring new skills, rather than reducing motivation and slowing down exploration, opens up new possibilities of learning even more abstract skills. 
+
+We then moved on to compare the CHRL agent to flat and reward-driven agents. The CHRL agent outperformed the other agents in terms of exploration efficiency, discovering a larger number of different events in the given environment. It also produced a larger number of meaningful / abstract events than the other agents. This is especially remarkable because two of the other agents used the number of events as a reward signal, but still produced fewer. This shows how powerful novelty is as a learning signal.
+
+One limitation of the current work is that we did not compare our agent to other implementations of option learning (cite who? -> RLDM). The reason for this is that our main interest lies in understanding human intelligence, rather than creating artificial intelligence. Nevertheless, it would be interesting to compare our framework to others. It would also especially exciting to integrate advances from this field into our algo, such as curiosity based on prediction rather than counting, or detecting events.
+
+But for now, it's pretty good. Because the task is so simplistic, we will have great experimental control once we present it to humans. We can manipulate the number of basic actions, length of options, number of levels, etc. in order to figure out the exact characteristics of human exploration and hierarchical learning. 
+
+Our eventual goal is to tweak the algorithm until it shows human-like behavior in this task, reproducing the overall pattern as well as typical mistakes. We can then extract trial-by-trial measures from the algorithm, for example curiosity-prediction errors, and regress them again physiological measures, such as functional magnetic resonance imaging (fMRI) data obtained from participants doing the task. This might allow us to study the neural underpinnings of the observed human behavior, localizing specific functions within the brain.
+
+Taken together, by creating the hierarchical novelty-seeking agent, we hope to show that learning of meaningful behavior can be driven by learning itself, rather than external rewards. In this framework, the learner produces the crucial learning signals itself, by selecting actions that over time reduce novelty. In other words, this learner balances the search for novelty with reducing prediction errors. It explores the environment in a systematic way, forms "hypotheses" and conducts "experiments", in order to learn more, just like we would expect from a human learner (Gopnik).
+
+Doing this, we'll be able to extract  Then, we'll put people in the scanner and use 
+
+
+can easily present it to humans and then compare. 
+
+was not rewarded for 
+
+despite not being rewarded  
+
+
+Implementing this algorithm
+
+
+humans form hierarchical representations of their environment, which allow them to form goal-directed, abstract action plans. These hierarchical representations are learned from interaction with environments that are sparse in rewards
+
+We have argued that human ability to learn structured representations and abstract action plans from interaction with environments that are sparse in rewards is (at least partly) based on curiosity-driven exploration 
+
+We have shown that a CHRL agent explores an environment with hierarchical structure in a more goal-directed and thorough way than a flat agent. It discovers more different events and learns strategy to reproduce these events at iths own wish. Doing this, it does not get bored - very simple action sequences (options) get boring, but it keeps adding abstract goals, which get less and less boring. 
+
+- limitation: we didn't compare to other option creation frameworks
+- why not? because we're interested in humans -> why didn't we compare to humans? -> future directions
 
 This makes sense and might be similar to humans.
 
@@ -150,6 +185,7 @@ Der algo ist auch weniger fehleranfaellig: Er kann bestimmte Fehler machen und t
 %Because options are strictly hierarchical in this way, time scales differ between options at different levels. Level-1 option policies are updated at each time step (because the agent executes one basic action at each time step), but level-2 option policies are only updated after a chosen level-1 option terminates. In the experiments presented below, all events are triggered by the sequential occurrence of two events at the level below. Therefore level-2 option policies can at most be updated every other time step, level-3 options every fourth, level-4 option every 8th, and so on.
  %Related work has suggested that this is a valuable approach (Work on novelty: Deepak Pathak, Pulkit Arawal, Yael Niv, Schmidhuber; on hierarchy: Marlos Machado, Botvinick, Yael Niv, Pedro Tsividis; combination of both: Deep HRL paper)
 
+
 \subsection{Future directions}
 
 \begin{itemize}
@@ -160,8 +196,6 @@ Der algo ist auch weniger fehleranfaellig: Er kann bestimmte Fehler machen und t
 	\item Check if there is more on the powerpoint.
 	\item Maybe all is really just exploration: Science, in the end, is the task of understanding the world.
 \end{itemize}
-
-Taken together, by creating the hierarchical novelty-seeking agent, we hope to show that learning of meaningful behavior can be driven by learning itself, rather than external rewards. In this framework, the learner produces the crucial learning signals itself, by selecting actions that over time reduce novelty. In other words, this learner balances the search for novelty with reducing prediction errors. It explores the environment in a systematic way, forms "hypotheses" and conducts "experiments", in order to learn more. 
 
 \if 0
 \subsection{Old Intro}

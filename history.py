@@ -35,21 +35,15 @@ class History(object):
         self.save_rest(env, 'event')
         self.save_rest(env, 'v')
         self.save_rest(env, 'n')
-        self.save_theta(env)
-        self.save_options(env)
+        # self.save_theta(env)
+        # self.save_options(env)
         # self.save_e(env)
 
     def get_data_path(self, agent, env, data_dir):
         hier = 'hierarchical' if agent.hier_level > 0 else 'flat'
-        folder_structure = "/n_options_per_level_" + str(env.n_options_per_level) +\
-                           "/option_length_" + str(env.option_length) +\
+        folder_structure = "/bugfix_" +\
                            "/" + hier +\
-                           "/" + agent.learning_signal +\
-                           "/alpha_" + str(agent.alpha) +\
-                           "/n_lambda_" + str(agent.n_lambda) +\
-                           "/gamma_" + str(agent.gamma) +\
-                           "/epsilon_" + str(agent.epsilon) +\
-                           "/distraction_" + str(agent.distraction) + "/"
+                           "/" + agent.learning_signal + "/"
         self.data_path = data_dir + folder_structure
 
     def save_rules(self, env):

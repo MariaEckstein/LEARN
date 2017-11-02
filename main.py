@@ -24,10 +24,10 @@ def let_agent_play(n_trials, n_agents, env, agent_stuff, data_dir):
 # Define how many games, agents, what parameters
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/'
 n_trials = 400
-n_agents = 100
+n_agents = 10
 n_envs = 30
 env_stuff = {'option_length': 2,
-             'n_options_per_level': [10, 5, 8, 2]}
+             'n_options_per_level': [5, 5, 5, 5, 5]}
 agent_stuff = {'hier_level': len(env_stuff['n_options_per_level']),  # flat (0), hierarchical (len(env_stuff['n_options_per_level'])), in-between?
                'learning_signal': 'novelty',  # novelty or reward
                'alpha': 0.3,  # learning rate

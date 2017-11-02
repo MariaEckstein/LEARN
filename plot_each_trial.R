@@ -1,5 +1,9 @@
 plot_each_trial = function(all_dat, gg_save, plot_dir) {
-
+  
+  if (!dir.exists(plot_dir)) {
+    dir.create(plot_dir)
+  }
+  
   for (tr in 0:max(all_dat$event_hist$trial)) {
     
     # Events/actions in each trial

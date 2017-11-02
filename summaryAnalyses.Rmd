@@ -16,19 +16,19 @@ theme_set(theme_bw())
 
 # What's the base directory of that data?
 base_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
-sum_plot_dir = file.path(base_dir, "plots")
+sum_plot_dir = file.path(base_dir, "bugfix_plots")
 if (!dir.exists(sum_plot_dir)) {
   dir.create(sum_plot_dir)
 }
 
 # What data do I have?
-agents = seq(0, 2)
-envs = seq(0, 15)
+agents = seq(0, 1)
+envs = c(seq(0, 20))
 
 # Should plots be saved?
 gg_save  = T
 analyze_all_trials = F
-analyze_my_algo = F
+analyze_my_algo = T
 analyze_all_algos = T
 
 # Which data should be plotted?
@@ -45,6 +45,9 @@ which_data$env_id = envs[1]
 which_data$agent_id = envs[1]
 which_data$learning_signal = "novelty"
 which_data$hier = "hierarchical"
+
+# Get plot colors
+seq_colors = colorRampPalette(c("blue", "yellow"))
 ```
 
 ```{r Analyze environments trialwise for all agents}
@@ -78,29 +81,29 @@ if (analyze_my_algo) {
   # Load data: one environment, 10 agents
   algo_n = data.frame()
   algo_v = data.frame()
-  algo_theta = data.frame()
+  # algo_theta = data.frame()
   rules = data.frame()
   
   which_data$hier = "hierarchical"
   which_data$learning_signal = "novelty"
-  which_data$env_id = 7
+  which_data$env_id = 0
 
-  for (agent_id in seq(0, 10)) {
+  for (agent_id in seq(0, 99)) {
     which_data$agent_id = agent_id
     all_dat = read_in_data(base_dir, which_data)
     algo_n = rbind(algo_n, all_dat$n_hist)
     algo_v = rbind(algo_v, all_dat$v_hist)
-    algo_theta = rbind(algo_theta, all_dat$theta_hist)
+    # algo_theta = rbind(algo_theta, all_dat$theta_hist)
     rules = rbind(rules, all_dat$rules)
   }
 
   # Prepare data
   algo_n$action = factor(algo_n$action)
   algo_v$action = factor(algo_v$action)
-  algo_theta_sum = ddply(subset(algo_theta, trial == max(algo_theta$trial)),
-                         .(level, option, action, feature),
-                         summarize,
-                         value = mean(value, na.rm = T))
+  # algo_theta_sum = ddply(subset(algo_theta, trial == max(algo_theta$trial)),
+  #                        .(level, option, action, feature),
+  #                        summarize,
+  #                        value = mean(value, na.rm = T))
   
   # Results
   ## Rules
@@ -108,23 +111,23 @@ if (analyze_my_algo) {
   
   ## Novelty over time
   gg_summary_novelty = ggplot(algo_n, aes(trial, value, group = action, color = action, fill = action)) +
-    stat_summary(fun.data = "mean_se", geom = "smooth") +
+    stat_summary(fun.data = "mean_cl_normal", geom = "smooth") +
     labs(x = "Time step", y = "Novelty", color = "Event", fill = "Event") +
     facet_grid(~ factor(level, levels = unique(algo_n$level), labels = paste("Level", unique(algo_n$level))))
   
   ## Value over time
-  gg_summary_value = gg_summary_novelty + labs(y = "Curiosity")
+  gg_summary_value = gg_summary_novelty + labs(y = "Curiosity") + coord_cartesian(y = c(0, 0.43))
   gg_summary_value$data = algo_v
   
   ## Final option policies
-  gg_theta = ggplot(algo_theta_sum, aes(action, feature)) +
-    geom_tile(aes(fill = value), color = "white") +
-    geom_text(aes(label = round(value, 2)), size = 1.5) +
-    scale_fill_gradient(low = "white", high = "red", limits = c(min(algo_theta$value), max(algo_theta$value))) +
-    labs(x = "Action", y = "Feature") +
-    theme(legend.position = "none") +
-    facet_wrap(factor(level, levels = sort(unique(algo_theta$level)), labels = paste("Level", sort(unique(algo_theta$level)))) ~
-                 factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))))
+  # gg_theta = ggplot(algo_theta_sum, aes(action, feature)) +
+  #   geom_tile(aes(fill = value), color = "white") +
+  #   geom_text(aes(label = round(value, 2)), size = 1.5) +
+  #   scale_fill_gradient(low = "white", high = "red", limits = c(min(algo_theta$value), max(algo_theta$value))) +
+  #   labs(x = "Action", y = "Feature") +
+  #   theme(legend.position = "none") +
+  #   facet_wrap(factor(level, levels = sort(unique(algo_theta$level)), labels = paste("Level", sort(unique(algo_theta$level)))) ~
+  #                factor(option, levels = sort(unique(algo_theta$option)), labels = paste("Option", sort(unique(algo_theta$option)))))
   
   # Save results
   if (gg_save) {
@@ -133,8 +136,8 @@ if (analyze_my_algo) {
     ggsave(file.path(sum_plot_dir, file_name), gg_summary_novelty, width = 10, height = 2)
     file_name = paste("gg_summary_value_", identifier, sep = "")
     ggsave(file.path(sum_plot_dir, file_name), gg_summary_value, width = 10, height = 2)
-    file_name = paste("gg_theta_", identifier, sep = "")
-    ggsave(file.path(sum_plot_dir, file_name), gg_theta, width = which_data$n_levels, height = 5)
+    # file_name = paste("gg_theta_", identifier, sep = "")
+    # ggsave(file.path(sum_plot_dir, file_name), gg_theta, width = which_data$n_levels, height = 5)
   }
   
   # RMSE of option policies}
@@ -189,29 +192,30 @@ if (analyze_all_algos) {
   }
 
   # Prepare data
-  event_hist = subset(event_hist, trial < 300)
   event_hist$env_id = factor(event_hist$env_id)
   event_hist$agent_id = factor(event_hist$agent_id)
-  event_hist$option_length = which_data$option_length ** (event_hist$level + 1)
+  event_hist$option_length = which_data$option_length ** (event_hist$level)
   event_hist$algorithm = with(event_hist, paste(hier, learning_signal))
   
-  v_hist = subset(v_hist, trial < 300)
   v_hist$env_id = factor(v_hist$env_id)
   v_hist$agent_id = factor(v_hist$agent_id)
   v_hist$level = factor(v_hist$level)
   
   ## Number of events produced over time
-  bin_size = 10
+  bin_size = 20
   event_hist$bin = NA
-  for (bin in seq(0, max(event_hist$trial), bin_size)) {
+  for (bin in c(seq(0, max(event_hist$trial), bin_size))) {
     event_hist[event_hist$trial >= bin,]$bin = bin
   }
+  
+  ### Sum over bins
   event_hist_sum = ddply(event_hist,
         .(env_id, hier, learning_signal, agent_id, bin, level, option_length),
         summarize,
         n_events = sum(value))
-  n_actions = length(unique(event_hist$action))
-  event_hist_sum$frac_events = event_hist_sum$n_events * (event_hist_sum$option_length * n_actions) / 100
+  event_hist_sum$frac_events = event_hist_sum$n_events / bin_size * event_hist_sum$option_length
+  
+  ## Average over agents
   event_hist_sum = ddply(event_hist_sum,
                         .(env_id, hier, learning_signal, bin, level, option_length),
                         summarize,
@@ -219,6 +223,7 @@ if (analyze_all_algos) {
                         n_events = mean(n_events))
   event_hist_sum$level = factor(event_hist_sum$level)
   
+  ## Average over agents, but not bins
   event_hist_sum2 = ddply(event_hist,
                           .(env_id, hier, learning_signal, algorithm, trial, level, option_length),
                           summarize,
@@ -239,9 +244,9 @@ if (analyze_all_algos) {
   
   # Number of events elicited
   gg_n_events = ggplot(subset(event_hist_sum), aes(bin, n_events, color = level, fill = level)) +
-    stat_summary(fun.data = "mean_cl_normal", geom = "smooth") +
-    scale_color_brewer(type = "seq", palette = 4, direction = -1) +
-    scale_fill_brewer(type = "seq", palette = 4, direction = -1) +
+    stat_summary(fun.data = "mean_se", geom = "smooth") +
+    scale_color_manual(values = seq_colors(n_actions)) +
+    scale_fill_manual(values = seq_colors(n_actions)) +
     labs(x = "Time step", y = paste("# of events per", bin_size, "time steps"), color = "Level", fill = "Level") +
     coord_cartesian(y = c(0, bin_size)) +
     facet_grid(hier ~ learning_signal)
@@ -250,6 +255,8 @@ if (analyze_all_algos) {
     aes(bin, frac_events) +
     coord_cartesian(y = c(0, 1)) +
     labs(x = "Time step", y = "# of events rel. to theor. max", color = "Level")
+  
+  # Also sum up all events and compare different agents (like disc_events plot, just plotting all occurring events on the y-axis instead)
   
   ## Number of times each action is executed (depending on how many options is it part of)
   action_centrality = expand.grid(action = unique(event_hist$action), level = unique(event_hist$level))

@@ -1,2 +1,7 @@
 Learn.*
 nips_*
+*.html
+*.pdf
+.RData
+.Rhistory
+.idea/

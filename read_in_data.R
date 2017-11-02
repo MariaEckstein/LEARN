@@ -56,22 +56,22 @@ read_in_data = function(base_dir, which_data) {
   state_hist$X = NULL
   state_hist = with(state_hist, state_hist[order(trial, level, action),])
   
-  # Option history
-  file_name = paste("option_history_long_", file_id, ".csv", sep = "")
-  option_hist = read.csv(file = file.path(data_dir, file_name), header = T)
-  option_hist$X = NULL
-  
-  # Theta history
-  file_name = paste("theta_history_long_", file_id, ".csv", sep = "")
-  theta_hist = read.csv(file = file.path(data_dir, file_name), header = T)
-  theta_hist$X = NULL
-  # theta_hist = subset(theta_hist, value != 0)
-  # Add levels column
-  theta_hist$level = 0
-  for (level in seq(which_data$n_levels)) {
-    level_actions = seq(which_data$n_levels * level, which_data$n_levels * (level+1) - 1)
-    theta_hist$level[theta_hist$option %in% level_actions] = level
-  }
+  # # Option history
+  # file_name = paste("option_history_long_", file_id, ".csv", sep = "")
+  # option_hist = read.csv(file = file.path(data_dir, file_name), header = T)
+  # option_hist$X = NULL
+  # 
+  # # Theta history
+  # file_name = paste("theta_history_long_", file_id, ".csv", sep = "")
+  # theta_hist = read.csv(file = file.path(data_dir, file_name), header = T)
+  # theta_hist$X = NULL
+  # # theta_hist = subset(theta_hist, value != 0)
+  # # Add levels column
+  # theta_hist$level = 0
+  # for (level in seq(which_data$n_levels)) {
+  #   level_actions = seq(which_data$n_levels * level, which_data$n_levels * (level+1) - 1)
+  #   theta_hist$level[theta_hist$option %in% level_actions] = level
+  # }
   
   # Add ids to data
   rules$hier = which_data$hier
@@ -89,14 +89,14 @@ read_in_data = function(base_dir, which_data) {
   state_hist$learning_signal = which_data$learning_signal
   state_hist$agent_id = which_data$agent_id
   state_hist$env_id = which_data$env_id
-  option_hist$hier = which_data$hier
-  option_hist$learning_signal = which_data$learning_signal
-  option_hist$agent_id = which_data$agent_id
-  option_hist$env_id = which_data$env_id
-  theta_hist$hier = which_data$hier
-  theta_hist$learning_signal = which_data$learning_signal
-  theta_hist$agent_id = which_data$agent_id
-  theta_hist$env_id = which_data$env_id
+  # option_hist$hier = which_data$hier
+  # option_hist$learning_signal = which_data$learning_signal
+  # option_hist$agent_id = which_data$agent_id
+  # option_hist$env_id = which_data$env_id
+  # theta_hist$hier = which_data$hier
+  # theta_hist$learning_signal = which_data$learning_signal
+  # theta_hist$agent_id = which_data$agent_id
+  # theta_hist$env_id = which_data$env_id
   event_hist$hier = which_data$hier
   event_hist$learning_signal = which_data$learning_signal
   event_hist$agent_id = which_data$agent_id
@@ -107,8 +107,8 @@ read_in_data = function(base_dir, which_data) {
   algo_dat$n_hist = n_hist
   algo_dat$v_hist = v_hist
   algo_dat$state_hist = state_hist
-  algo_dat$option_hist = option_hist
-  algo_dat$theta_hist = theta_hist
+  # algo_dat$option_hist = option_hist
+  # algo_dat$theta_hist = theta_hist
   algo_dat$event_hist = event_hist
   
   # Return data

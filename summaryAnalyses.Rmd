@@ -244,7 +244,7 @@ if (analyze_all_algos) {
   
   # Number of events elicited
   gg_n_events = ggplot(subset(event_hist_sum), aes(bin, n_events, color = level, fill = level)) +
-    stat_summary(fun.data = "mean_se", geom = "smooth") +
+    stat_summary(fun.data = "mean_cl_normal", geom = "smooth") +
     scale_color_manual(values = seq_colors(n_actions)) +
     scale_fill_manual(values = seq_colors(n_actions)) +
     labs(x = "Time step", y = paste("# of events per", bin_size, "time steps"), color = "Level", fill = "Level") +

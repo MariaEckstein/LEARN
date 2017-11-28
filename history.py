@@ -10,21 +10,22 @@ class History(object):
         self.env_id = env.id
         self.agent_id = agent.id
         # Dataframes to be saved
-        self.state = np.zeros([env.n_trials, env.n_levels, env.n_basic_actions])
+        n_trials = env.n_trials_play + env.n_trials_reward
+        self.state = np.zeros([n_trials, env.n_levels, env.n_basic_actions])
         self.event = np.zeros(self.state.shape)
-        self.event_s = np.full([env.n_trials, env.n_levels], np.nan)  # list of past events at each level
+        self.event_s = np.full([n_trials, env.n_levels], np.nan)  # list of past events at each level
         self.action_s = np.full(self.event_s.shape, np.nan)  # list of past actions at each level
-        self.v = np.zeros([env.n_trials, env.n_levels, env.n_basic_actions])
+        self.v = np.zeros([n_trials, env.n_levels, env.n_basic_actions])
         self.n = np.zeros(self.v.shape)
         theta_shape = list(agent.theta.theta.shape)
         theta_shape[-1] += 2
-        theta_shape.insert(0, env.n_levels * env.n_trials)
+        theta_shape.insert(0, env.n_levels * n_trials)
         self.theta = np.zeros(theta_shape)
         self.theta_row = 0
-        self.option = np.zeros([env.n_trials * env.n_levels, env.n_levels, env.n_basic_actions + 2])
+        self.option = np.zeros([n_trials * env.n_levels, env.n_levels, env.n_basic_actions + 2])
         self.option_row = 0
         self.step = 0
-        self.e = np.zeros(np.append(env.n_trials, agent.theta.theta.shape))  # elig. trace
+        self.e = np.zeros(np.append(n_trials, agent.theta.theta.shape))  # elig. trace
 
     def save_all(self, agent, env, data_dir):
         self.get_data_path(agent, env, data_dir)
@@ -41,8 +42,7 @@ class History(object):
 
     def get_data_path(self, agent, env, data_dir):
         hier = 'hierarchical' if agent.hier_level > 0 else 'flat'
-        folder_structure = "/bugfix_" +\
-                           "/" + hier +\
+        folder_structure = "/" + hier +\
                            "/" + agent.learning_signal + "/"
         self.data_path = data_dir + folder_structure
 

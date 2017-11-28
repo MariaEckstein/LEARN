@@ -25,8 +25,6 @@ class V(object):
         elif agent.learning_signal == 'reward':
             reward_signal = np.sum(events)
         delta = goal_achieved * reward_signal - self.v[option[0], option[1]]
-        if np.isnan(delta):
-            delta = 0
         self.v[option[0], option[1]] += agent.alpha * delta
 
     def get_option_values(self, state, option, theta):

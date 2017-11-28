@@ -4,6 +4,11 @@ from v import V
 
 
 # TDs:
+# - read RL with Hierarchies of machines; MaxQ; The Option-Critic Architecture
+# - check if other people have had more than 2 levels of options
+# - leave a light on at each level
+# - compare to stronger baseline: rewards depnding on number of lights turned on also take into accoutn the level
+# - represent states as 0 1 0 1 etc. rules apply to states rather than action sequnces
 # - get rid of the dataframes that take too long to save to make it faster
 # - check if i'm counting the number of steps right (steps_till_event_reached) -> it's weird that level-0 actions have lower curiosity than higher-level actions
 # - fix history -> make nicer, more general functions, avoid repeating myself
@@ -23,16 +28,16 @@ class Agent(object):
     This class encompasses all hierarchical agents.
     Hierarchical agents perceive higher-level lights and/or create options.
     """
-    def __init__(self, agent_stuff, env):
-        self.id = agent_stuff['id']
+    def __init__(self, parameters, learning_signal, hier_level, id, env):
+        self.learning_signal = learning_signal
+        self.hier_level = hier_level
+        self.id = id
         # Agent's RL features
-        self.alpha = agent_stuff['alpha']  # learning rate
-        self.epsilon = agent_stuff['epsilon']  # greediness
-        self.n_lambda = agent_stuff['n_lambda']  # decay rate of novelty
-        self.gamma = agent_stuff['gamma']  # 1 - future discounting
-        self.distraction = agent_stuff['distraction']  # propensity to quit unfinished options
-        self.hier_level = agent_stuff['hier_level']  # what is the highest-level option the agent can select?
-        self.learning_signal = agent_stuff['learning_signal']  # novelty or reward?
+        self.alpha = parameters['alpha']  # learning rate
+        self.epsilon = parameters['epsilon']  # greediness
+        self.n_lambda = parameters['n_lambda']  # decay rate of novelty
+        self.gamma = parameters['gamma']  # 1 - future discounting
+        self.distraction = parameters['distraction']  # propensity to quit unfinished options
         # Agent's thoughts about its environment (novelty, values, theta)
         self.n = np.zeros([env.n_levels, env.n_basic_actions])  # event counter
         self.v = V(env, self.n_lambda)  # curiosity about basic actions and already-discovered options
@@ -77,9 +82,13 @@ class Agent(object):
             hist.update_option_history(self, trial)
 
     # Learn and helpers
-    def learn(self, hist, env, events, trial, state_before, state_after):
+    def learn(self, hist, env, events, rewards, trial, state_before, state_after):
         self.__learn_from_events(hist, env, trial, events, state_before, state_after)  # count events, initialize new options (v & theta)
         self.__learn_rest(hist, trial, events, state_before, state_after)  # update theta of ongoing options, v of terminated
+        self.__learn_from_rewards(rewards)
+
+    def __learn_from_rewards(self, rewards):
+        self.v.v += self.alpha * rewards
 
     def __learn_from_events(self, hist, env, trial, events, state_before, state_after):
         current_events = np.argwhere(events)
@@ -105,7 +114,6 @@ class Agent(object):
                     self.v.update(self, current_option, 1, events)
                 self.finish_option()
             elif self.__is_distracted():  # goal not achieved -> event didn't happen -> update expected novelty toward 0
-                a = self.__is_novel(current_option)  # THIS IS TRUE SOMETIMES! MUST BE A BUG! CAN'T BE NEW IF IT'S IN THE OPTION STACK!
                 self.v.update(self, current_option, 0, events)
                 self.finish_option()
             else:  # if current_option has not terminated, no higher-level option can have terminated

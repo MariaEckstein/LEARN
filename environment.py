@@ -3,7 +3,7 @@ import itertools
 
 
 class Environment(object):
-    def __init__(self, option_length, n_options_per_level, rewarded_events, n_trials, env_id):
+    def __init__(self, option_length, n_options_per_level, reward, n_trials, env_id):
         self.id = env_id
         self.n_trials_play = n_trials['play']
         self.n_trials_reward = n_trials['reward']
@@ -14,8 +14,8 @@ class Environment(object):
         self.state = np.zeros([self.n_levels, self.n_basic_actions], dtype=bool)  # previous event at each level
         self.events = np.zeros([self.n_levels, self.n_basic_actions], dtype=bool)  # events of the current trial
         self.rewarded_events = np.zeros(self.events.shape)
-        for ev in rewarded_events:
-            self.rewarded_events[ev[0], ev[1]] = np.random.rand()
+        for level, event in enumerate(reward['events']):
+            self.rewarded_events[level, event] = reward['value']
 
         # Make the rules for this game
         max_options = max(self.n_options_per_level[1:])

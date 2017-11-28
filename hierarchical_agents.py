@@ -7,21 +7,9 @@ from v import V
 # - read RL with Hierarchies of machines; MaxQ; The Option-Critic Architecture
 # - check if other people have had more than 2 levels of options
 # - leave a light on at each level
-# - compare to stronger baseline: rewards depnding on number of lights turned on also take into accoutn the level
-# - represent states as 0 1 0 1 etc. rules apply to states rather than action sequnces
-# - get rid of the dataframes that take too long to save to make it faster
+# - compare to stronger baseline: rewards depending on number of lights turned on also take into accoutn the level
 # - check if i'm counting the number of steps right (steps_till_event_reached) -> it's weird that level-0 actions have lower curiosity than higher-level actions
-# - fix history -> make nicer, more general functions, avoid repeating myself
-# - save rules
-# - bug in line 107 (hierarchical_agents.py)
-# - try if TD helps now, with just 2 action options
-# - re-read the options paper -> how do they deal with forgetting / value updating in options?
-# - add TD also to novelty level?  => No! I can use a hier_level=1 agent instead
-# - options should not be able to select actions that have not yet been discovered  => CHECK
-# - code bugs out when an intermediate level has fewer options than the one before  => couldn't figure out
 # - different learning rates for novelty and values  => maybe later
-# - just one set of elig. traces per level of the hierarchy (not every option needs its own elig. tr.)?
-# => NO. If every option has its own trace, I can later add memory and stuff
 
 class Agent(object):
     """
@@ -50,7 +38,7 @@ class Agent(object):
         if self.__inside_option():
             values = self.v.get_option_values(state_before, self.option_stack[-1], self.theta)  # use option policy
         else:
-            values = self.v.get()  # use novelty / curiosity
+            values = self.v.get()  # curiosity (self.v.c) + reward values (self.v.r)
         option = self.__select_option(values)
         self.once_per_option(hist, option, trial)
         if self.__is_basic(option):
@@ -78,6 +66,8 @@ class Agent(object):
     def once_per_trial(self, trial, hist):
         hist.n[trial] = self.n.copy()
         hist.v[trial] = self.v.get()
+        hist.r[trial] = self.v.r.copy()
+        hist.c[trial] = self.v.c.copy()
         if self.hier_level > 0:
             hist.update_option_history(self, trial)
 
@@ -85,10 +75,7 @@ class Agent(object):
     def learn(self, hist, env, events, rewards, trial, state_before, state_after):
         self.__learn_from_events(hist, env, trial, events, state_before, state_after)  # count events, initialize new options (v & theta)
         self.__learn_rest(hist, trial, events, state_before, state_after)  # update theta of ongoing options, v of terminated
-        self.__learn_from_rewards(rewards)
-
-    def __learn_from_rewards(self, rewards):
-        self.v.v += self.alpha * rewards
+        self.v.learn_from_rewards(rewards, self.alpha)
 
     def __learn_from_events(self, hist, env, trial, events, state_before, state_after):
         current_events = np.argwhere(events)
@@ -97,7 +84,7 @@ class Agent(object):
             if self.__is_novel(event):
                 self.v.create_option(event)
                 self.theta.create_option(event, env, self.v.get())
-                self.v.update(self, event, 1, events)  # update option value right away
+                self.v.update_c(self, event, 1, events)  # update option value right away
             if not self.__is_basic(event):  # it's a higher-level event
                 self.theta.update(self, hist, event, 1, state_before, state_after)  # update in-option policy
             hist.update_theta_history(self, event, trial)
@@ -111,10 +98,10 @@ class Agent(object):
                 self.theta.update(self, hist, current_option, 0, state_before, state_after)
             if goal_achieved:  # goal achieved -> event happened -> update expected novelty toward perceived novelty
                 if not self.__is_novel(current_option):  # novel events are already updated in learn_from_events
-                    self.v.update(self, current_option, 1, events)
+                    self.v.update_c(self, current_option, 1, events)
                 self.finish_option()
             elif self.__is_distracted():  # goal not achieved -> event didn't happen -> update expected novelty toward 0
-                self.v.update(self, current_option, 0, events)
+                self.v.update_c(self, current_option, 0, events)
                 self.finish_option()
             else:  # if current_option has not terminated, no higher-level option can have terminated
                 break  # no more updating needed

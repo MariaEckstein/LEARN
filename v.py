@@ -5,14 +5,21 @@ class V(object):
     def __init__(self, env, n_lambda):
         self.n_lambda = n_lambda
         self.initial_value = 1 / env.n_basic_actions
-        self.v = self.initial_value * np.ones([env.n_levels, env.n_basic_actions])  # level x action
-        self.v[1:] = np.nan  # undefined for options
-        self.step_counter = np.zeros(self.v.shape)
+        self.c = self.initial_value * np.ones([env.n_levels, env.n_basic_actions])  # level x action
+        self.c[1:] = np.nan  # undefined for options
+        self.r = np.zeros([env.n_levels, env.n_basic_actions])  # level x action
+        self.r[1:] = np.nan
+        self.step_counter = np.zeros(self.c.shape)
 
     def create_option(self, option):
-        self.v[option[0], option[1]] = self.initial_value
+        self.c[option[0], option[1]] = self.initial_value
+        self.r[option[0], option[1]] = 0
 
-    def update(self, agent, option, goal_achieved, events):
+    def learn_from_rewards(self, rewards, alpha):
+        delta = (rewards - self.r) * (rewards > 0)  # discrepancy at rewarded locations only
+        self.r += alpha * delta
+
+    def update_c(self, agent, option, goal_achieved, events):
         if agent.learning_signal == 'novelty':
             if agent.hier_level > 0:
                 steps_till_event_reached = self.step_counter[option[0], option[1]]
@@ -24,8 +31,8 @@ class V(object):
             reward_signal = agent.gamma ** steps_till_event_reached * event_novelty
         elif agent.learning_signal == 'reward':
             reward_signal = np.sum(events)
-        delta = goal_achieved * reward_signal - self.v[option[0], option[1]]
-        self.v[option[0], option[1]] += agent.alpha * delta
+        delta = goal_achieved * reward_signal - self.c[option[0], option[1]]
+        self.c[option[0], option[1]] += agent.alpha * delta
 
     def get_option_values(self, state, option, theta):
         action_level = option[0] - 1
@@ -38,4 +45,4 @@ class V(object):
         return values.copy()
 
     def get(self):
-        return self.v.copy()
+        return self.c + self.r

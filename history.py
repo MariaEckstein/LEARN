@@ -16,7 +16,9 @@ class History(object):
         self.event_s = np.full([n_trials, env.n_levels], np.nan)  # list of past events at each level
         self.action_s = np.full(self.event_s.shape, np.nan)  # list of past actions at each level
         self.v = np.zeros([n_trials, env.n_levels, env.n_basic_actions])
+        self.c = np.zeros(self.v.shape)
         self.n = np.zeros(self.v.shape)
+        self.r = np.zeros(self.v.shape)
         theta_shape = list(agent.theta.theta.shape)
         theta_shape[-1] += 2
         theta_shape.insert(0, env.n_levels * n_trials)
@@ -36,6 +38,8 @@ class History(object):
         self.save_rest(env, 'event')
         self.save_rest(env, 'v')
         self.save_rest(env, 'n')
+        self.save_rest(env, 'r')
+        self.save_rest(env, 'c')
         # self.save_theta(env)
         # self.save_options(env)
         # self.save_e(env)
@@ -45,6 +49,19 @@ class History(object):
         folder_structure = "/" + hier +\
                            "/" + agent.learning_signal + "/"
         self.data_path = data_dir + folder_structure
+
+    def save_rest(self, env, which_data):
+        data = getattr(self, which_data)
+        colnames = [str(i) for i in range(env.n_basic_actions)]
+        data_hist = pd.DataFrame(columns=colnames)
+        for trial in range(data.shape[0]):
+            trial_hist = pd.DataFrame(data[trial, :, :], columns=colnames)
+            trial_hist['trial'] = trial
+            trial_hist['level'] = range(env.n_levels)
+            data_hist = pd.concat([data_hist, trial_hist])
+        data_hist_long = pd.melt(data_hist, id_vars=["trial", "level"], var_name="action")
+        data_hist_long['action'] = pd.to_numeric(data_hist_long['action'])
+        data_hist_long.to_csv(self.data_path + "/" + which_data + "_hist_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
 
     def save_rules(self, env):
         colnames = ['action' + str(i) for i in range(env.option_length)]
@@ -85,20 +102,6 @@ class History(object):
         option_history_long = pd.melt(option_history, id_vars=["trial", "step", "level"], var_name="action")
         option_history_long['action'] = pd.to_numeric(option_history_long['action'])
         option_history_long.to_csv(self.data_path + "/option_history_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
-
-    def save_rest(self, env, which_data):
-        # for which_data = ['state', 'event', 'v', 'n']!
-        data = getattr(self, which_data)
-        colnames = [str(i) for i in range(env.n_basic_actions)]
-        data_hist = pd.DataFrame(columns=colnames)
-        for trial in range(data.shape[0]):
-            trial_hist = pd.DataFrame(data[trial, :, :], columns=colnames)
-            trial_hist['trial'] = trial
-            trial_hist['level'] = range(env.n_levels)
-            data_hist = pd.concat([data_hist, trial_hist])
-        data_hist_long = pd.melt(data_hist, id_vars=["trial", "level"], var_name="action")
-        data_hist_long['action'] = pd.to_numeric(data_hist_long['action'])
-        data_hist_long.to_csv(self.data_path + "/" + which_data + "_hist_long_e" + str(self.env_id) + "_a" + str(self.agent_id) + ".csv")
 
     # def save_e(self, env):
     #     colnames = [str(i) for i in range(env.n_basic_actions)]

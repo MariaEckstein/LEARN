@@ -17,11 +17,12 @@ def let_agent_play(agent, env, trial, external_rewards):
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/2017_11_28'
 n_trials = {'play': 200,
             'reward': 200}
-n_agents = 2
-n_envs = 2
+n_agents = 20
+n_envs = 20
 option_length = 2
 n_options_per_level = [5, 5, 5, 5, 5]
-rewarded_events = [np.random.choice(range(n), 2, replace=False) for n in n_options_per_level]
+reward = {'events': [np.random.choice(range(n), 2, replace=False) for n in n_options_per_level],
+          'value': 0.5}
 parameters = {'alpha': 0.3,  # learning rate
               'n_lambda': 0.3,  # how fast does novelty decay?
               'gamma': 0.9,  # how much does the agent care about the future?
@@ -31,15 +32,15 @@ parameters = {'alpha': 0.3,  # learning rate
 # Let different agents play in different environments
 for env_id in range(n_envs):
     print('Environment', env_id)
-    env = Environment(option_length, n_options_per_level, rewarded_events, n_trials, env_id)
+    env = Environment(option_length, n_options_per_level, reward, n_trials, env_id)
 
     print('Hierarchical-novelty agents')
     for ag in range(n_agents):
         agent = Agent(parameters, 'novelty', len(n_options_per_level), ag, env)
         hist = History(env, agent)
-        for trial in range(n_trials['play']):
+        for trial in range(0, n_trials['play']):
             let_agent_play(agent, env, trial, external_rewards=False)
-        for trial in range(n_trials['reward']):
+        for trial in range(n_trials['play'], n_trials['play'] + n_trials['reward']):
             let_agent_play(agent, env, trial, external_rewards=True)
         print('Saving agent', ag, '...')
         hist.save_all(agent, env, data_dir)

@@ -4,7 +4,6 @@ get_dir = function(base_dir, which_data) {
   
   # Get data directory
   data_dir = paste(base_dir,
-                   "/bugfix_",
                    # "/n_options_per_level_", which_data$n_options_per_level,
                    # "/option_length_", which_data$option_length,
                    "/", which_data$hier,

@@ -12,13 +12,21 @@ def let_agent_play(agent, env, trial, external_rewards):
     state_after = env.state.copy()
     agent.learn(hist, env, events, rewards, trial, state_before, state_after)
 
+def the_whole_thing(agent, env, hist):
+    for trial in range(0, n_trials['play']):
+        let_agent_play(agent, env, trial, external_rewards=False)
+    for trial in range(n_trials['play'], n_trials['play'] + n_trials['reward']):
+        let_agent_play(agent, env, trial, external_rewards=True)
+    print('Saving agent', ag, '...')
+    hist.save_all(agent, env, data_dir)
+
 
 # Define specifics
 data_dir = 'C:/Users/maria/MEGAsync/Berkeley/LEARN/data/2017_11_28'
 n_trials = {'play': 200,
             'reward': 200}
-n_agents = 20
-n_envs = 20
+n_agents = 50
+n_envs = 50
 option_length = 2
 n_options_per_level = [5, 5, 5, 5, 5]
 reward = {'events': [np.random.choice(range(n), 2, replace=False) for n in n_options_per_level],
@@ -38,18 +46,22 @@ for env_id in range(n_envs):
     for ag in range(n_agents):
         agent = Agent(parameters, 'novelty', len(n_options_per_level), ag, env)
         hist = History(env, agent)
-        for trial in range(0, n_trials['play']):
-            let_agent_play(agent, env, trial, external_rewards=False)
-        for trial in range(n_trials['play'], n_trials['play'] + n_trials['reward']):
-            let_agent_play(agent, env, trial, external_rewards=True)
-        print('Saving agent', ag, '...')
-        hist.save_all(agent, env, data_dir)
+        the_whole_thing(agent, env, hist)
 
-    # print('Hierarchical-reward agents')
-    # let_agent_play(env, 'reward', len(n_options_per_level), data_dir)
-    #
-    # print('Flat-novelty agents')
-    # let_agent_play(env, 'novelty', 0, data_dir)
-    #
-    # print('Flat-reward agents')
-    # let_agent_play(env, 'reward', 0, data_dir)
+    print('Hierarchical-reward agents')
+    for ag in range(n_agents):
+        agent = Agent(parameters, 'reward', len(n_options_per_level), ag, env)
+        hist = History(env, agent)
+        the_whole_thing(agent, env, hist)
+
+    print('Flat-novelty agents')
+    for ag in range(n_agents):
+        agent = Agent(parameters, 'novelty', 0, ag, env)
+        hist = History(env, agent)
+        the_whole_thing(agent, env, hist)
+
+    print('Flat-reward agents')
+    for ag in range(n_agents):
+        agent = Agent(parameters, 'reward', 0, ag, env)
+        hist = History(env, agent)
+        the_whole_thing(agent, env, hist)

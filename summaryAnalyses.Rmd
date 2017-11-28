@@ -15,8 +15,8 @@ library("ggplot2"); library("plyr"); library("reshape"); library("gridExtra")
 theme_set(theme_bw())
 
 # What's the base directory of that data?
-base_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data"
-sum_plot_dir = file.path(base_dir, "bugfix_plots")
+base_dir = "C:/Users/maria/MEGAsync/Berkeley/LEARN/data/2017_11_28"
+sum_plot_dir = file.path(base_dir, "plots")
 if (!dir.exists(sum_plot_dir)) {
   dir.create(sum_plot_dir)
 }
@@ -88,7 +88,7 @@ if (analyze_my_algo) {
   which_data$learning_signal = "novelty"
   which_data$env_id = 0
 
-  for (agent_id in seq(0, 99)) {
+  for (agent_id in seq(0, 19)) {
     which_data$agent_id = agent_id
     all_dat = read_in_data(base_dir, which_data)
     algo_n = rbind(algo_n, all_dat$n_hist)
